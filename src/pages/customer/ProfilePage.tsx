@@ -1,18 +1,39 @@
 import { useState } from 'react';
 import { Bell, HelpCircle, LogOut, ChevronRight, CreditCard as Edit3, Store, Building, Phone, MapPin } from 'lucide-react';
-import { sofia, sofiaLoyalty, businesses } from '../../data/mockData';
-import type { Level } from '../../data/mockData';
+import { sofia } from '../../data/mockData';
 import Modal from '../../components/Modal';
 import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
+import { useSupabaseQuery } from '../../hooks/useSupabaseQuery';
 
-const levelBadge: Record<Level, string> = {
+const levelBadge: Record<string, string> = {
   Gold: 'bg-gradient-to-r from-[#7546ED] to-[#DC89FF] text-white',
   Silver: 'bg-gradient-to-r from-[#032C7D] to-[#7546ED] text-white',
   Bronze: 'bg-gradient-to-r from-[#12173B] to-[#032C7D] text-white',
 };
+
+interface LoyaltyCardWithBusiness {
+  id: string;
+  card_number: string;
+  current_points: number;
+  total_points_earned: number;
+  total_visits: number;
+  issued_at: string;
+  business_id: string;
+  current_level_id: string | null;
+  businesses: {
+    id: string;
+    name: string;
+    category: string;
+  }[];
+  loyalty_levels: {
+    id: string;
+    name: string;
+    color: string;
+  }[];
+}
 
 const menuItems = [
   { icon: Edit3, label: 'Edit Profile', color: 'text-[#12173B]' },
@@ -34,7 +55,107 @@ export default function ProfilePage() {
   
   // Use real user data if available, otherwise fallback to mock data
   const displayUser = user || sofia;
-  const totalPoints = sofiaLoyalty.reduce((acc, r) => acc + r.points, 0);
+  
+  // Query real loyalty cards from Supabase (using separate queries to avoid schema cache issues)
+  const { data: loyaltyCards, loading: cardsLoading } = useSupabaseQuery<LoyaltyCardWithBusiness[]>(
+    async () => {
+      if (!user?.id) {
+        return { data: [], error: null };
+      }
+      
+      try {
+        // Get loyalty cards first
+        const { data: cardsOnly, error: cardsError } = await supabase
+          .from('loyalty_cards')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('is_active', true)
+          .order('issued_at', { ascending: false });
+
+        if (cardsError) {
+          console.error('Error loading cards:', cardsError);
+          return { data: [], error: cardsError };
+        }
+
+        if (!cardsOnly || cardsOnly.length === 0) {
+          return { data: [], error: null };
+        }
+
+        // Get business info separately
+        const businessIds = cardsOnly.map(c => c.business_id).filter(Boolean);
+        const businessesMap: Record<string, any> = {};
+        
+        if (businessIds.length > 0) {
+          const { data: businesses } = await supabase
+            .from('businesses')
+            .select('id, name, category')
+            .in('id', businessIds);
+          
+          businesses?.forEach(b => {
+            businessesMap[b.id] = b;
+          });
+        }
+
+        // Get levels info separately
+        const levelIds = cardsOnly.map(c => c.current_level_id).filter(Boolean);
+        const levelsMap: Record<string, any> = {};
+        
+        if (levelIds.length > 0) {
+          const { data: levels } = await supabase
+            .from('loyalty_levels')
+            .select('id, name, color')
+            .in('id', levelIds);
+          
+          levels?.forEach(l => {
+            levelsMap[l.id] = l;
+          });
+        }
+
+        const data = cardsOnly.map(card => ({
+          ...card,
+          businesses: businessesMap[card.business_id] ? [businessesMap[card.business_id]] : [],
+          loyalty_levels: levelsMap[card.current_level_id] ? [levelsMap[card.current_level_id]] : []
+        }));
+
+        return { data, error: null };
+      } catch (err: any) {
+        console.error('Error loading loyalty cards:', err);
+        return { data: [], error: err };
+      }
+    },
+    [user?.id],
+    { enabled: !!user?.id, timeout: 15000 }
+  );
+  
+  const userCards = loyaltyCards || [];
+  const totalPoints = userCards.reduce((acc, card) => acc + (card.current_points || 0), 0);
+  
+  // Query to check if user already owns a business
+  const { data: userBusiness } = useSupabaseQuery(
+    async () => {
+      if (!user?.id) {
+        return { data: null, error: null };
+      }
+      
+      try {
+        const { data, error } = await supabase
+          .from('businesses')
+          .select('id, name')
+          .eq('owner_id', user.id)
+          .limit(1)
+          .maybeSingle();
+        
+        return { data, error };
+      } catch (err: any) {
+        console.error('Error checking user business:', err);
+        return { data: null, error: err };
+      }
+    },
+    [user?.id],
+    { enabled: !!user?.id, timeout: 10000 }
+  );
+  
+  const hasBusiness = !!userBusiness;
   
   const [editModal, setEditModal] = useState(false);
   const [logoutModal, setLogoutModal] = useState(false);
@@ -167,9 +288,9 @@ export default function ProfilePage() {
           <div className="grid grid-cols-3 divide-x divide-[#B1A9E5]/20">
             <div className="flex flex-col items-center px-3">
               <span className="text-[#7546ED] font-extrabold text-2xl">
-                {sofiaLoyalty.length}
+                {cardsLoading ? '-' : userCards.length}
               </span>
-              <span className="text-[#B1A9E5] text-[10px] text-center mt-0.5">Businesses visited</span>
+              <span className="text-[#B1A9E5] text-[10px] text-center mt-0.5">Your Cards</span>
             </div>
             <div className="flex flex-col items-center px-3">
               <span className="text-[#7546ED] font-extrabold text-2xl">
@@ -187,33 +308,55 @@ export default function ProfilePage() {
 
       {/* My Loyalty */}
       <div className="px-5 mt-5">
-        <h2 className="font-bold text-[#12173B] text-base mb-3">My Loyalty</h2>
+        <h2 className="font-bold text-[#12173B] text-base mb-3">Your Cards</h2>
         <div className="bg-white rounded-2xl shadow-sm border border-[#B1A9E5]/10 overflow-hidden">
-          {sofiaLoyalty.map((record, i) => {
-            const biz = businesses.find(b => b.id === record.businessId)!;
-            return (
-              <div
-                key={record.businessId}
-                className={`flex items-center justify-between px-4 py-3 ${
-                  i < sofiaLoyalty.length - 1 ? 'border-b border-[#B1A9E5]/10' : ''
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-bold text-sm"
-                    style={{ background: 'linear-gradient(135deg, #7546ED, #DC89FF)' }}>
-                    {biz.name.charAt(0)}
+          {cardsLoading ? (
+            <div className="px-4 py-6 text-center">
+              <div className="w-8 h-8 border-2 border-[#7546ED]/30 border-t-[#7546ED] rounded-full animate-spin mx-auto mb-2"></div>
+              <span className="text-[#B1A9E5] text-sm">Loading your cards...</span>
+            </div>
+          ) : userCards.length === 0 ? (
+            <div className="px-4 py-6 text-center">
+              <Store size={32} className="text-[#B1A9E5] mx-auto mb-2" />
+              <span className="text-[#12173B] font-medium text-sm">No cards yet</span>
+              <p className="text-[#B1A9E5] text-xs mt-1">Visit businesses to get loyalty cards</p>
+            </div>
+          ) : (
+            userCards.map((card, i) => {
+              const businessName = card.businesses?.[0]?.name || 'Unknown Business';
+              const levelName = card.loyalty_levels?.[0]?.name || 'Member';
+              const levelColor = card.loyalty_levels?.[0]?.color || '#7546ED';
+              
+              return (
+                <div
+                  key={card.id}
+                  className={`flex items-center justify-between px-4 py-3 ${
+                    i < userCards.length - 1 ? 'border-b border-[#B1A9E5]/10' : ''
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-bold text-sm"
+                      style={{ background: `linear-gradient(135deg, ${levelColor}, #DC89FF)` }}>
+                      {businessName.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="font-semibold text-[#12173B] text-sm">{businessName}</span>
+                      <span className="text-[#B1A9E5] text-xs">{card.total_visits || 0} visits</span>
+                    </div>
                   </div>
-                  <span className="font-semibold text-[#12173B] text-sm">{biz.name}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[#7546ED] font-bold text-sm">{card.current_points || 0} pts</span>
+                    <span 
+                      className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white"
+                      style={{ background: levelColor }}
+                    >
+                      {levelName}
+                    </span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-[#7546ED] font-bold text-sm">{record.points} pts</span>
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${levelBadge[record.level]}`}>
-                    {record.level}
-                  </span>
-                </div>
-              </div>
-            );
-          })}
+              );
+            })
+          )}
         </div>
       </div>
 
@@ -246,28 +389,30 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* Register Business Section */}
-      <div className="px-5 mt-4">
-        <div className="bg-gradient-to-r from-[#7546ED] to-[#DC89FF] rounded-2xl p-4 shadow-sm border border-[#B1A9E5]/20">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
-                <businessMenuItem.icon size={20} className="text-white" />
+      {/* Register Business Section - Only show if user doesn't have a business */}
+      {!hasBusiness && (
+        <div className="px-5 mt-4">
+          <div className="bg-gradient-to-r from-[#7546ED] to-[#DC89FF] rounded-2xl p-4 shadow-sm border border-[#B1A9E5]/20">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                  <businessMenuItem.icon size={20} className="text-white" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-white text-sm">Start Your Business</h3>
+                  <p className="text-white/80 text-xs">Create your loyalty program</p>
+                </div>
               </div>
-              <div>
-                <h3 className="font-bold text-white text-sm">Start Your Business</h3>
-                <p className="text-white/80 text-xs">Create your loyalty program</p>
-              </div>
+              <button
+                onClick={handleRegisterBusiness}
+                className="px-4 py-2 bg-white/20 backdrop-blur-sm rounded-lg text-white font-semibold text-sm hover:bg-white/30 transition-colors"
+              >
+                Register
+              </button>
             </div>
-            <button
-              onClick={handleRegisterBusiness}
-              className="px-4 py-2 bg-white/20 backdrop-blur-sm rounded-lg text-white font-semibold text-sm hover:bg-white/30 transition-colors"
-            >
-              Register
-            </button>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Business Registration Modal */}
       <Modal open={businessModal} onClose={() => setBusinessModal(false)} title="Register Your Business">

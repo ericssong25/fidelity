@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, X, Plus, CreditCard, AlertCircle, RefreshCw } from 'lucide-react';
+import { Search, X, Plus, CreditCard, AlertCircle, RefreshCw, ShoppingCart, Minus, Trash2 } from 'lucide-react';
 import Modal from '../../components/Modal';
 import { useApp } from '../../context/AppContext';
 import { useBusinessData } from '../../context/BusinessDataContext';
@@ -15,6 +15,7 @@ const levelBadge: Record<Level, string> = {
 
 interface SelectedCustomer {
   id: string;
+  loyaltyCardId: string;
   name: string;
   initials: string;
   level: Level;
@@ -26,6 +27,20 @@ interface SelectedCustomer {
 }
 
 type LevelFilter = 'All' | Level;
+
+interface Product {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  points: number;
+  category: string;
+  is_available: boolean;
+}
+
+interface CartItem extends Product {
+  quantity: number;
+}
 
 export default function CustomersPage() {
   const { showToast } = useApp();
@@ -40,6 +55,15 @@ export default function CustomersPage() {
   // Card creation state
   const [cardModal, setCardModal] = useState(false);
   const [isCreatingCard, setIsCreatingCard] = useState(false);
+  
+  // Purchase registration state
+  const [purchaseModal, setPurchaseModal] = useState(false);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [isLoadingProducts, setIsLoadingProducts] = useState(false);
+  const [isProcessingPurchase, setIsProcessingPurchase] = useState(false);
+  const [productSearch, setProductSearch] = useState('');
+  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   
   // User search state
   const [userSearch, setUserSearch] = useState('');
@@ -56,6 +80,219 @@ export default function CustomersPage() {
 
   function handleCreateCard() {
     setCardModal(true);
+  }
+
+  function handleRegisterPurchase() {
+    if (!business?.id) {
+      showToast('Business not found', 'error');
+      return;
+    }
+    loadProducts();
+    setPurchaseModal(true);
+    setCart([]);
+    setProductSearch('');
+    setFilteredProducts([]);
+  }
+
+  async function loadProducts() {
+    if (!business?.id) return;
+    
+    setIsLoadingProducts(true);
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .eq('business_id', business.id)
+        .eq('is_available', true)
+        .order('name', { ascending: true });
+      
+      if (error) {
+        console.error('Error loading products:', error);
+        showToast('Failed to load products', 'error');
+      } else {
+        setProducts(data || []);
+      }
+    } catch (error) {
+      console.error('Error loading products:', error);
+      showToast('Failed to load products', 'error');
+    } finally {
+      setIsLoadingProducts(false);
+    }
+  }
+
+  // Filter products based on search
+  useEffect(() => {
+    if (!productSearch.trim()) {
+      setFilteredProducts([]);
+      return;
+    }
+    
+    const search = productSearch.toLowerCase();
+    const filtered = products.filter(p => 
+      p.name.toLowerCase().includes(search) || 
+      p.category.toLowerCase().includes(search)
+    ).slice(0, 5);
+    
+    setFilteredProducts(filtered);
+  }, [productSearch, products]);
+
+  function addToCart(product: Product) {
+    setCart(prev => {
+      const existing = prev.find(item => item.id === product.id);
+      if (existing) {
+        return prev.map(item =>
+          item.id === product.id
+            ? { ...item, quantity: item.quantity + 1 }
+            : item
+        );
+      }
+      return [...prev, { ...product, quantity: 1 }];
+    });
+  }
+
+  function removeFromCart(productId: string) {
+    setCart(prev => prev.filter(item => item.id !== productId));
+  }
+
+  function updateQuantity(productId: string, delta: number) {
+    setCart(prev =>
+      prev.map(item => {
+        if (item.id === productId) {
+          const newQuantity = Math.max(1, item.quantity + delta);
+          return { ...item, quantity: newQuantity };
+        }
+        return item;
+      })
+    );
+  }
+
+  const cartTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const cartPoints = cart.reduce((sum, item) => sum + (item.points * item.quantity), 0);
+
+  async function handleSubmitPurchase() {
+    if (!business?.id || !selected) {
+      showToast('Missing business or customer information', 'error');
+      return;
+    }
+
+    if (cart.length === 0) {
+      showToast('Please add at least one product', 'error');
+      return;
+    }
+
+    setIsProcessingPurchase(true);
+
+    try {
+      // Find the loyalty card for this customer using loyaltyCardId stored in selected
+      const { data: loyaltyCard, error: cardError } = await supabase
+        .from('loyalty_cards')
+        .select('id, user_id, current_points, total_points_earned, total_visits')
+        .eq('id', selected.loyaltyCardId)
+        .single();
+
+      if (cardError || !loyaltyCard) {
+        console.error('Card error:', cardError);
+        showToast('Customer does not have a loyalty card', 'error');
+        setIsProcessingPurchase(false);
+        return;
+      }
+
+      const totalAmount = cartTotal;
+      const totalPoints = cartPoints;
+
+      // 1. Create the purchase record
+      const { data: purchase, error: purchaseError } = await supabase
+        .from('purchases')
+        .insert({
+          loyalty_card_id: loyaltyCard.id,
+          business_id: business.id,
+          total_amount: totalAmount,
+          total_points: totalPoints,
+          status: 'completed',
+          payment_method: 'cash',
+          notes: '',
+          created_by: selected.id
+        })
+        .select()
+        .single();
+
+      if (purchaseError || !purchase) {
+        console.error('Purchase creation error:', purchaseError);
+        showToast('Failed to create purchase', 'error');
+        setIsProcessingPurchase(false);
+        return;
+      }
+
+      // 2. Create purchase items
+      const purchaseItems = cart.map(item => ({
+        purchase_id: purchase.id,
+        product_id: item.id,
+        quantity: item.quantity,
+        unit_price: item.price,
+        points_per_unit: item.points,
+        total_points: item.points * item.quantity
+      }));
+
+      const { error: itemsError } = await supabase
+        .from('purchase_items')
+        .insert(purchaseItems);
+
+      if (itemsError) {
+        console.error('Purchase items error:', itemsError);
+        showToast('Failed to add purchase items', 'error');
+        setIsProcessingPurchase(false);
+        return;
+      }
+
+      // 3. Create point transaction
+      const { error: transactionError } = await supabase
+        .from('point_transactions')
+        .insert({
+          loyalty_card_id: loyaltyCard.id,
+          type: 'earned',
+          points: totalPoints,
+          description: `Purchase #${purchase.id.slice(0, 8)} - ${cart.length} item(s)`,
+          reference_id: purchase.id,
+          reference_type: 'purchase',
+          created_by: selected.id
+        });
+
+      if (transactionError) {
+        console.error('Point transaction error:', transactionError);
+      }
+
+      // 4. Update loyalty card points and visits
+      const { error: updateError } = await supabase
+        .from('loyalty_cards')
+        .update({
+          current_points: (loyaltyCard.current_points || 0) + totalPoints,
+          total_points_earned: (loyaltyCard.total_points_earned || 0) + totalPoints,
+          total_visits: (loyaltyCard.total_visits || 0) + 1,
+          last_visit: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', loyaltyCard.id);
+
+      if (updateError) {
+        console.error('Card update error:', updateError);
+      }
+
+      showToast(`Purchase completed! +${totalPoints} points added`, 'success');
+      
+      // Reset and close
+      setCart([]);
+      setPurchaseModal(false);
+      setSelected(null);
+      
+      // Refresh data
+      await refreshCards();
+
+    } catch (error) {
+      console.error('Purchase processing error:', error);
+      showToast('An unexpected error occurred', 'error');
+    } finally {
+      setIsProcessingPurchase(false);
+    }
   }
 
   async function handleCreateLoyaltyCard() {
@@ -253,7 +490,8 @@ export default function CustomersPage() {
             <div
               key={card.id}
               onClick={() => setSelected({
-                id: card.id,
+                id: card.user_id,
+                loyaltyCardId: card.id,
                 name: card.profiles?.name || 'Unknown',
                 initials: (card.profiles?.name || 'Unknown').split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2),
                 level: 'Bronze', // TODO: Calculate based on points
@@ -327,12 +565,21 @@ export default function CustomersPage() {
             <div className="p-5">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-bold text-[#12173B] text-sm">Transaction History</h3>
-                <button
-                  onClick={() => setAdjustModal(true)}
-                  className="px-3 py-1.5 rounded-btn bg-[#7546ED]/10 text-[#7546ED] text-xs font-bold"
-                >
-                  Adjust Points
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleRegisterPurchase}
+                    className="px-3 py-1.5 rounded-btn bg-[#10B981]/10 text-[#10B981] text-xs font-bold flex items-center gap-1"
+                  >
+                    <ShoppingCart size={12} />
+                    Register Purchase
+                  </button>
+                  <button
+                    onClick={() => setAdjustModal(true)}
+                    className="px-3 py-1.5 rounded-btn bg-[#7546ED]/10 text-[#7546ED] text-xs font-bold"
+                  >
+                    Adjust Points
+                  </button>
+                </div>
               </div>
               <div className="space-y-2">
                 {selected.transactions.map((tx: { id: string; description: string; date: string; points: number }) => (
@@ -513,6 +760,152 @@ export default function CustomersPage() {
                 </>
               ) : (
                 'Create Card'
+              )}
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Simplified Purchase Registration Modal */}
+      <Modal open={purchaseModal} onClose={() => setPurchaseModal(false)} title="Quick Purchase">
+        <div className="space-y-3 max-h-[75vh] overflow-y-auto">
+          {/* Customer Info */}
+          <div className="bg-[#F4F3FB] rounded-lg p-3 flex items-center justify-between">
+            <div>
+              <p className="text-[#12173B] font-semibold text-sm">{selected?.name}</p>
+              <p className="text-[#B1A9E5] text-xs">{selected?.points} pts • {selected?.visits} visits</p>
+            </div>
+            {cart.length > 0 && (
+              <div className="text-right">
+                <p className="text-[#7546ED] font-extrabold text-lg">${cartTotal.toFixed(2)}</p>
+                <p className="text-[#10B981] text-xs font-semibold">+{cartPoints} pts</p>
+              </div>
+            )}
+          </div>
+
+          {/* Product Search */}
+          <div>
+            <label className="text-xs font-semibold text-[#B1A9E5] mb-1 block">Search Product</label>
+            <div className="relative">
+              <input
+                value={productSearch}
+                onChange={e => setProductSearch(e.target.value)}
+                placeholder="Type product name..."
+                className="w-full pl-3 pr-9 py-2.5 rounded-inp border border-[#B1A9E5]/30 text-sm text-[#12173B] outline-none focus:border-[#7546ED] transition-all"
+              />
+              {productSearch && (
+                <button
+                  onClick={() => setProductSearch('')}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-[#B1A9E5] hover:text-[#7546ED]"
+                >
+                  <X size={16} />
+                </button>
+              )}
+            </div>
+
+            {/* Search Results */}
+            {filteredProducts.length > 0 && (
+              <div className="mt-2 space-y-1 max-h-40 overflow-y-auto">
+                {filteredProducts.map(product => (
+                  <button
+                    key={product.id}
+                    onClick={() => {
+                      addToCart(product);
+                      setProductSearch('');
+                      setFilteredProducts([]);
+                    }}
+                    className="w-full flex items-center justify-between p-2 bg-white border border-[#B1A9E5]/20 rounded-lg hover:border-[#7546ED]/40 transition-colors"
+                  >
+                    <div className="text-left">
+                      <p className="font-semibold text-[#12173B] text-sm">{product.name}</p>
+                      <p className="text-[#B1A9E5] text-xs">${product.price} • {product.points} pts • {product.category}</p>
+                    </div>
+                    <div className="w-7 h-7 rounded bg-[#10B981] text-white flex items-center justify-center">
+                      <Plus size={16} />
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {productSearch && filteredProducts.length === 0 && !isLoadingProducts && (
+              <p className="text-[#B1A9E5] text-xs mt-2 text-center">No products found</p>
+            )}
+          </div>
+
+          {/* Cart */}
+          {cart.length > 0 && (
+            <div className="bg-[#F4F3FB] rounded-lg p-3">
+              <h4 className="font-bold text-[#12173B] text-sm mb-2">Items ({cart.length})</h4>
+              <div className="space-y-2">
+                {cart.map(item => (
+                  <div key={item.id} className="flex items-center justify-between bg-white p-2 rounded-lg">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-[#12173B] text-sm truncate">{item.name}</p>
+                      <p className="text-[#B1A9E5] text-xs">${item.price} each</p>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => updateQuantity(item.id, -1)}
+                        className="w-6 h-6 rounded bg-[#B1A9E5]/20 text-[#12173B] flex items-center justify-center"
+                      >
+                        <Minus size={12} />
+                      </button>
+                      <span className="font-semibold text-[#12173B] text-sm w-5 text-center">
+                        {item.quantity}
+                      </span>
+                      <button
+                        onClick={() => updateQuantity(item.id, 1)}
+                        className="w-6 h-6 rounded bg-[#7546ED]/20 text-[#7546ED] flex items-center justify-center"
+                      >
+                        <Plus size={12} />
+                      </button>
+                      <button
+                        onClick={() => removeFromCart(item.id)}
+                        className="w-6 h-6 rounded text-[#FF6B6B] flex items-center justify-center ml-1"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Empty Cart State */}
+          {cart.length === 0 && (
+            <div className="text-center py-4">
+              <ShoppingCart size={32} className="text-[#B1A9E5] mx-auto mb-2" />
+              <p className="text-[#B1A9E5] text-xs">Search and add products to cart</p>
+            </div>
+          )}
+
+          {/* Actions */}
+          <div className="flex gap-3 pt-2">
+            <button
+              onClick={() => {
+                setPurchaseModal(false);
+                setCart([]);
+                setProductSearch('');
+              }}
+              disabled={isProcessingPurchase}
+              className="flex-1 py-3 rounded-btn border border-[#B1A9E5]/40 text-[#B1A9E5] font-semibold text-sm disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSubmitPurchase}
+              disabled={isProcessingPurchase || cart.length === 0}
+              className="flex-[2] py-3 rounded-btn bg-[#10B981] text-white font-bold text-sm disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {isProcessingPurchase ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  Processing...
+                </>
+              ) : (
+                <>Complete +{cartPoints} pts</>
               )}
             </button>
           </div>

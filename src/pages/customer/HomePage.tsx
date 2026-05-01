@@ -1,11 +1,31 @@
 import { useNavigate } from 'react-router-dom';
 import RoleSwitcher from '../../components/RoleSwitcher';
 import LoyaltyCard from '../../components/LoyaltyCard';
-import { sofia, sofiaLoyalty, businesses } from '../../data/mockData';
+import { sofia } from '../../data/mockData';
 import { useAuth } from '../../context/AuthContext';
+import { useSupabaseQuery } from '../../hooks/useSupabaseQuery';
+import { supabase } from '../../lib/supabase';
+import type { Level } from '../../data/mockData';
 
-function getBusinessById(id: string) {
-  return businesses.find(b => b.id === id)!;
+interface LoyaltyCardWithBusiness {
+  id: string;
+  card_number: string;
+  current_points: number;
+  total_points_earned: number;
+  total_visits: number;
+  issued_at: string;
+  business_id: string;
+  current_level_id: string | null;
+  businesses: {
+    id: string;
+    name: string;
+    category: string;
+  }[];
+  loyalty_levels: {
+    id: string;
+    name: string;
+    color: string;
+  }[];
 }
 
 export default function HomePage() {
@@ -14,6 +34,79 @@ export default function HomePage() {
   
   // Use real user data if available, otherwise fallback to mock data
   const displayUser = user || sofia;
+  
+  // Query real loyalty cards from Supabase (using separate queries to avoid schema cache issues)
+  const { data: loyaltyCards, loading: cardsLoading } = useSupabaseQuery<LoyaltyCardWithBusiness[]>(
+    async () => {
+      if (!user?.id) {
+        return { data: [], error: null };
+      }
+      
+      try {
+        // Get loyalty cards first
+        const { data: cardsOnly, error: cardsError } = await supabase
+          .from('loyalty_cards')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('is_active', true)
+          .order('issued_at', { ascending: false });
+
+        if (cardsError) {
+          console.error('Error loading cards:', cardsError);
+          return { data: [], error: cardsError };
+        }
+
+        if (!cardsOnly || cardsOnly.length === 0) {
+          return { data: [], error: null };
+        }
+
+        // Get business info separately
+        const businessIds = cardsOnly.map(c => c.business_id).filter(Boolean);
+        const businessesMap: Record<string, any> = {};
+        
+        if (businessIds.length > 0) {
+          const { data: businesses } = await supabase
+            .from('businesses')
+            .select('id, name, category')
+            .in('id', businessIds);
+          
+          businesses?.forEach(b => {
+            businessesMap[b.id] = b;
+          });
+        }
+
+        // Get levels info separately
+        const levelIds = cardsOnly.map(c => c.current_level_id).filter(Boolean);
+        const levelsMap: Record<string, any> = {};
+        
+        if (levelIds.length > 0) {
+          const { data: levels } = await supabase
+            .from('loyalty_levels')
+            .select('id, name, color')
+            .in('id', levelIds);
+          
+          levels?.forEach(l => {
+            levelsMap[l.id] = l;
+          });
+        }
+
+        const data = cardsOnly.map(card => ({
+          ...card,
+          businesses: businessesMap[card.business_id] ? [businessesMap[card.business_id]] : [],
+          loyalty_levels: levelsMap[card.current_level_id] ? [levelsMap[card.current_level_id]] : []
+        }));
+
+        return { data, error: null };
+      } catch (err: any) {
+        console.error('Error loading loyalty cards:', err);
+        return { data: [], error: err };
+      }
+    },
+    [user?.id],
+    { enabled: !!user?.id, timeout: 15000 }
+  );
+  
+  const userCards = loyaltyCards || [];
 
   // Unused variables - commented out since sections are hidden
   // const allNews = businesses.flatMap(b =>
@@ -66,23 +159,35 @@ export default function HomePage() {
             </button>
           </div>
           <div className="flex gap-3 overflow-x-auto pb-2 -mx-5 px-5 scrollbar-hide">
-            {sofiaLoyalty.map(record => {
-              const biz = getBusinessById(record.businessId);
-              return (
-                <div
-                  key={record.businessId}
-                  onClick={() => navigate(`/cards/${record.businessId}`)}
-                  className="cursor-pointer hover:scale-105 transition-transform duration-200"
-                >
-                  <LoyaltyCard
-                    businessName={biz.name}
-                    points={record.points}
-                    level={record.level}
-                    visits={record.visits}
-                  />
-                </div>
-              );
-            })}
+            {cardsLoading ? (
+              <div className="flex-shrink-0 w-40 h-24 rounded-2xl bg-white/50 border border-[#B1A9E5]/20 flex items-center justify-center">
+                <div className="w-6 h-6 border-2 border-[#7546ED]/30 border-t-[#7546ED] rounded-full animate-spin"></div>
+              </div>
+            ) : userCards.length === 0 ? (
+              <div className="flex-shrink-0 w-64 h-24 rounded-2xl bg-white border border-[#B1A9E5]/20 flex flex-col items-center justify-center px-4">
+                <span className="text-[#12173B] font-medium text-sm">No cards yet</span>
+                <span className="text-[#B1A9E5] text-xs">Visit businesses to get started</span>
+              </div>
+            ) : (
+              userCards.map(card => {
+                const businessName = card.businesses?.[0]?.name || 'Unknown';
+                const levelName = (card.loyalty_levels?.[0]?.name || 'Bronze') as Level;
+                return (
+                  <div
+                    key={card.id}
+                    onClick={() => navigate(`/cards/${card.business_id}`)}
+                    className="cursor-pointer hover:scale-105 transition-transform duration-200"
+                  >
+                    <LoyaltyCard
+                      businessName={businessName}
+                      points={card.current_points || 0}
+                      level={levelName}
+                      visits={card.total_visits || 0}
+                    />
+                  </div>
+                );
+              })
+            )}
           </div>
         </section>
 
