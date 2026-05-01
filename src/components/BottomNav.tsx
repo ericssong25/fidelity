@@ -2,9 +2,9 @@ import { NavLink } from 'react-router-dom';
 import { Home, CreditCard, User } from 'lucide-react';
 
 const items = [
-  { to: '/home', icon: Home, label: 'Home' },
-  { to: '/cards', icon: CreditCard, label: 'My Cards' },
-  { to: '/profile', icon: User, label: 'Profile' },
+  { to: '/home', icon: Home, label: 'Inicio' },
+  { to: '/cards', icon: CreditCard, label: 'Tarjetas' },
+  { to: '/profile', icon: User, label: 'Perfil' },
 ];
 
 export default function BottomNav() {

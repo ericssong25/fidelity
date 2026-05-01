@@ -71,7 +71,7 @@ export default function RoleSwitcher() {
             : 'text-[#B1A9E5]'
         }`}
       >
-        Customer
+        Cliente
       </span>
       <span
         className={`px-3 py-1 rounded-full transition-all duration-200 ${
@@ -80,7 +80,7 @@ export default function RoleSwitcher() {
             : 'text-[#B1A9E5]'
         }`}
       >
-        Business
+        Negocio
       </span>
     </button>
   );

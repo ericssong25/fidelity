@@ -3,13 +3,13 @@ import { LayoutDashboard, Users, Package, Tag, Gift, Newspaper, Settings, ArrowL
 import { useApp } from '../context/AppContext';
 
 const items = [
-  { to: '/business/overview', icon: LayoutDashboard, label: 'Overview' },
-  { to: '/business/customers', icon: Users, label: 'Customers' },
-  { to: '/business/products', icon: Package, label: 'Products' },
-  { to: '/business/promotions', icon: Tag, label: 'Promotions' },
-  { to: '/business/rewards', icon: Gift, label: 'Rewards' },
-  { to: '/business/news', icon: Newspaper, label: 'News' },
-  { to: '/business/settings', icon: Settings, label: 'Settings' },
+  { to: '/business/overview', icon: LayoutDashboard, label: 'Resumen' },
+  { to: '/business/customers', icon: Users, label: 'Clientes' },
+  { to: '/business/products', icon: Package, label: 'Productos' },
+  { to: '/business/promotions', icon: Tag, label: 'Promociones' },
+  { to: '/business/rewards', icon: Gift, label: 'Recompensas' },
+  { to: '/business/news', icon: Newspaper, label: 'Noticias' },
+  { to: '/business/settings', icon: Settings, label: 'Ajustes' },
 ];
 
 export default function BusinessSidebar() {
@@ -26,9 +26,9 @@ export default function BusinessSidebar() {
       <div className="p-5 border-b border-white/10">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#7546ED] to-[#DC89FF] flex items-center justify-center">
-            <span className="text-white font-bold text-xs">F</span>
+            <span className="text-white font-bold text-xs">Z</span>
           </div>
-          <span className="text-white font-bold text-base">FidelyApp</span>
+          <span className="text-white font-bold text-base">Zuma</span>
         </div>
         <p className="text-[#B1A9E5] text-xs mt-1">Moka Café</p>
       </div>
@@ -55,10 +55,10 @@ export default function BusinessSidebar() {
       <div className="p-3 border-t border-white/10">
         <button
           onClick={switchToCustomer}
-          className="flex items-center gap-2 w-full px-3 py-2.5 rounded-xl text-[#B1A9E5] hover:bg-white/5 hover:text-white transition-all text-sm font-medium"
+          className="flex items-center gap-2 w-full px-3 py-2.5 rounded-xl text-[#B1A9E5] hover:text-white hover:bg-white/5 transition-all text-sm"
         >
           <ArrowLeft size={16} />
-          Customer View
+          Cambiar a Cliente
         </button>
       </div>
     </aside>

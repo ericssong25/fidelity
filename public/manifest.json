@@ -1,7 +1,7 @@
 {
-  "name": "FidelyApp",
-  "short_name": "FidelyApp",
-  "description": "Digital loyalty card platform",
+  "name": "Zuma",
+  "short_name": "Zuma",
+  "description": "Suma puntos para los negocios que amas",
   "start_url": "/",
   "display": "standalone",
   "theme_color": "#7546ED",

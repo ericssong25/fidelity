@@ -130,9 +130,9 @@ export default function HomePage() {
       <div className="sticky top-0 z-30 bg-[#F4F3FB]/80 backdrop-blur-md px-5 py-3 flex items-center justify-between border-b border-[#B1A9E5]/10">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#7546ED] to-[#DC89FF] flex items-center justify-center">
-            <span className="text-white font-bold text-xs">F</span>
+            <span className="text-white font-bold text-xs">Z</span>
           </div>
-          <span className="font-bold text-[#12173B] text-base">FidelyApp</span>
+          <span className="font-bold text-[#12173B] text-base">Zuma</span>
         </div>
         <RoleSwitcher />
       </div>
@@ -141,21 +141,21 @@ export default function HomePage() {
         {/* Greeting */}
         <div className="mb-6">
           <div className="flex items-center gap-1">
-            <h1 className="text-2xl font-extrabold text-[#12173B]">Hello, {displayUser.name.split(' ')[0]}</h1>
+            <h1 className="text-2xl font-extrabold text-[#12173B]">Hola, {displayUser.name.split(' ')[0]}</h1>
             <span className="text-2xl">👋</span>
           </div>
-          <p className="text-[#B1A9E5] text-sm mt-0.5 font-medium">Here's what's new today</p>
+          <p className="text-[#B1A9E5] text-sm mt-0.5 font-medium">Esto es lo nuevo hoy</p>
         </div>
 
         {/* Your Cards */}
         <section className="mb-8">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="font-bold text-[#12173B] text-base">Your Cards</h2>
+            <h2 className="font-bold text-[#12173B] text-base">Tus tarjetas</h2>
             <button
               onClick={() => navigate('/cards')}
               className="text-[#7546ED] text-xs font-semibold"
             >
-              See all
+              Ver todas
             </button>
           </div>
           <div className="flex gap-3 overflow-x-auto pb-2 -mx-5 px-5 scrollbar-hide">
@@ -165,8 +165,8 @@ export default function HomePage() {
               </div>
             ) : userCards.length === 0 ? (
               <div className="flex-shrink-0 w-64 h-24 rounded-2xl bg-white border border-[#B1A9E5]/20 flex flex-col items-center justify-center px-4">
-                <span className="text-[#12173B] font-medium text-sm">No cards yet</span>
-                <span className="text-[#B1A9E5] text-xs">Visit businesses to get started</span>
+                <span className="text-[#12173B] font-medium text-sm">Sin tarjetas aún</span>
+                <span className="text-[#B1A9E5] text-xs">Visita negocios para comenzar</span>
               </div>
             ) : (
               userCards.map(card => {

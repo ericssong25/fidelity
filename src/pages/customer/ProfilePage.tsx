@@ -36,15 +36,15 @@ interface LoyaltyCardWithBusiness {
 }
 
 const menuItems = [
-  { icon: Edit3, label: 'Edit Profile', color: 'text-[#12173B]' },
-  { icon: Bell, label: 'Notifications', color: 'text-[#12173B]' },
-  { icon: HelpCircle, label: 'Help & Support', color: 'text-[#12173B]' },
-  { icon: LogOut, label: 'Log out', color: 'text-[#FF6B6B]' },
+  { icon: Edit3, label: 'Editar perfil', color: 'text-[#12173B]' },
+  { icon: Bell, label: 'Notificaciones', color: 'text-[#12173B]' },
+  { icon: HelpCircle, label: 'Ayuda y soporte', color: 'text-[#12173B]' },
+  { icon: LogOut, label: 'Cerrar sesión', color: 'text-[#FF6B6B]' },
 ];
 
 const businessMenuItem = {
   icon: Store,
-  label: 'Register Business',
+  label: 'Registrar negocio',
   color: 'text-[#7546ED]'
 };
 
@@ -181,17 +181,17 @@ export default function ProfilePage() {
 
   async function handleCreateBusiness() {
     if (!user) {
-      showToast('Please log in to create a business', 'error');
+      showToast('Inicia sesión para crear un negocio', 'error');
       return;
     }
 
     // Validation
     if (!businessForm.name.trim()) {
-      showToast('Business name is required', 'error');
+      showToast('El nombre del negocio es requerido', 'error');
       return;
     }
     if (!businessForm.category.trim()) {
-      showToast('Category is required', 'error');
+      showToast('La categoría es requerida', 'error');
       return;
     }
 
@@ -213,11 +213,11 @@ export default function ProfilePage() {
 
       if (error) {
         console.error('Business creation error:', error);
-        showToast('Failed to create business. Please try again.', 'error');
+        showToast('Error al crear negocio. Intenta de nuevo.', 'error');
         return;
       }
 
-      showToast('Business created successfully!', 'success');
+      showToast('¡Negocio creado exitosamente!', 'success');
       
       // Reset form and close modal
       setBusinessForm({
@@ -234,7 +234,7 @@ export default function ProfilePage() {
       
     } catch (error) {
       console.error('Business creation error:', error);
-      showToast('An unexpected error occurred. Please try again.', 'error');
+      showToast('Ocurrió un error inesperado. Intenta de nuevo.', 'error');
     } finally {
       setIsCreatingBusiness(false);
     }
@@ -248,7 +248,7 @@ export default function ProfilePage() {
     // Update name logic - in real app, this would update Supabase
     if (user) {
       // For now, just show success message
-      showToast('Profile updated successfully!', 'success');
+      showToast('¡Perfil actualizado!', 'success');
     }
     
     setEditModal(false);
@@ -261,7 +261,7 @@ export default function ProfilePage() {
 
   function handleLogout() {
     logout();
-    showToast('Logged out successfully', 'success');
+    showToast('Sesión cerrada exitosamente', 'success');
     setLogoutModal(false);
     navigate('/auth');
   }
@@ -290,17 +290,17 @@ export default function ProfilePage() {
               <span className="text-[#7546ED] font-extrabold text-2xl">
                 {cardsLoading ? '-' : userCards.length}
               </span>
-              <span className="text-[#B1A9E5] text-[10px] text-center mt-0.5">Your Cards</span>
+              <span className="text-[#B1A9E5] text-[10px] text-center mt-0.5">Tarjetas</span>
             </div>
             <div className="flex flex-col items-center px-3">
               <span className="text-[#7546ED] font-extrabold text-2xl">
                 {totalPoints.toLocaleString()}
               </span>
-              <span className="text-[#B1A9E5] text-[10px] text-center mt-0.5">Total points</span>
+              <span className="text-[#B1A9E5] text-[10px] text-center mt-0.5">Puntos totales</span>
             </div>
             <div className="flex flex-col items-center px-3">
               <span className="text-[#7546ED] font-extrabold text-2xl">2</span>
-              <span className="text-[#B1A9E5] text-[10px] text-center mt-0.5">Rewards redeemed</span>
+              <span className="text-[#B1A9E5] text-[10px] text-center mt-0.5">Recompensas canjeadas</span>
             </div>
           </div>
         </div>
@@ -308,23 +308,23 @@ export default function ProfilePage() {
 
       {/* My Loyalty */}
       <div className="px-5 mt-5">
-        <h2 className="font-bold text-[#12173B] text-base mb-3">Your Cards</h2>
+        <h2 className="font-bold text-[#12173B] text-base mb-3">Tus tarjetas</h2>
         <div className="bg-white rounded-2xl shadow-sm border border-[#B1A9E5]/10 overflow-hidden">
           {cardsLoading ? (
             <div className="px-4 py-6 text-center">
               <div className="w-8 h-8 border-2 border-[#7546ED]/30 border-t-[#7546ED] rounded-full animate-spin mx-auto mb-2"></div>
-              <span className="text-[#B1A9E5] text-sm">Loading your cards...</span>
+              <span className="text-[#B1A9E5] text-sm">Cargando tus tarjetas...</span>
             </div>
           ) : userCards.length === 0 ? (
             <div className="px-4 py-6 text-center">
               <Store size={32} className="text-[#B1A9E5] mx-auto mb-2" />
-              <span className="text-[#12173B] font-medium text-sm">No cards yet</span>
-              <p className="text-[#B1A9E5] text-xs mt-1">Visit businesses to get loyalty cards</p>
+              <span className="text-[#12173B] font-medium text-sm">Sin tarjetas aún</span>
+              <p className="text-[#B1A9E5] text-xs mt-1">Visita negocios para obtener tarjetas</p>
             </div>
           ) : (
             userCards.map((card, i) => {
-              const businessName = card.businesses?.[0]?.name || 'Unknown Business';
-              const levelName = card.loyalty_levels?.[0]?.name || 'Member';
+              const businessName = card.businesses?.[0]?.name || 'Negocio desconocido';
+              const levelName = card.loyalty_levels?.[0]?.name || 'Miembro';
               const levelColor = card.loyalty_levels?.[0]?.color || '#7546ED';
               
               return (
@@ -341,7 +341,7 @@ export default function ProfilePage() {
                     </div>
                     <div className="flex flex-col">
                       <span className="font-semibold text-[#12173B] text-sm">{businessName}</span>
-                      <span className="text-[#B1A9E5] text-xs">{card.total_visits || 0} visits</span>
+                      <span className="text-[#B1A9E5] text-xs">{card.total_visits || 0} visitas</span>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
@@ -367,12 +367,12 @@ export default function ProfilePage() {
             <button
               key={item.label}
               onClick={() => {
-                if (item.label === 'Edit Profile') {
+                if (item.label === 'Editar perfil') {
                   setEditModal(true);
-                } else if (item.label === 'Log out') {
+                } else if (item.label === 'Cerrar sesión') {
                   setLogoutModal(true);
                 } else {
-                  showToast(`${item.label} — coming soon`, 'info');
+                  showToast(`${item.label} — próximamente`, 'info');
                 }
               }}
               className={`w-full flex items-center justify-between px-4 py-3.5 hover:bg-[#F4F3FB] transition-colors ${
@@ -399,15 +399,15 @@ export default function ProfilePage() {
                   <businessMenuItem.icon size={20} className="text-white" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-white text-sm">Start Your Business</h3>
-                  <p className="text-white/80 text-xs">Create your loyalty program</p>
+                  <h3 className="font-bold text-white text-sm">Comienza tu negocio</h3>
+                  <p className="text-white/80 text-xs">Crea tu programa de lealtad</p>
                 </div>
               </div>
               <button
                 onClick={handleRegisterBusiness}
                 className="px-4 py-2 bg-white/20 backdrop-blur-sm rounded-lg text-white font-semibold text-sm hover:bg-white/30 transition-colors"
               >
-                Register
+                Registrar
               </button>
             </div>
           </div>
@@ -415,15 +415,15 @@ export default function ProfilePage() {
       )}
 
       {/* Business Registration Modal */}
-      <Modal open={businessModal} onClose={() => setBusinessModal(false)} title="Register Your Business">
+      <Modal open={businessModal} onClose={() => setBusinessModal(false)} title="Registra tu negocio">
         <div className="space-y-4">
           <div className="text-center py-2">
             <div className="w-16 h-16 rounded-full bg-[#7546ED]/10 flex items-center justify-center mx-auto mb-4">
               <Store size={24} className="text-[#7546ED]" />
             </div>
-            <h3 className="font-bold text-[#12173B] text-lg mb-2">Create Your Business</h3>
+            <h3 className="font-bold text-[#12173B] text-lg mb-2">Crea tu negocio</h3>
             <p className="text-[#B1A9E5] text-sm">
-              Start your loyalty program in minutes
+              Comienza tu programa de lealtad en minutos
             </p>
           </div>
           
@@ -431,13 +431,13 @@ export default function ProfilePage() {
             <div>
               <label className="text-xs font-semibold text-[#B1A9E5] mb-1 flex items-center gap-1">
                 <Building size={12} />
-                Business Name *
+                Nombre del negocio *
               </label>
               <input 
                 type="text"
                 value={businessForm.name}
                 onChange={e => handleBusinessFormChange('name', e.target.value)}
-                placeholder="Enter your business name"
+                placeholder="Nombre de tu negocio"
                 className="w-full px-3 py-2.5 rounded-inp border border-[#B1A9E5]/30 text-sm text-[#12173B] outline-none focus:border-[#7546ED] transition-all" 
               />
             </div>
@@ -461,11 +461,11 @@ export default function ProfilePage() {
             </div>
             
             <div>
-              <label className="text-xs font-semibold text-[#B1A9E5] mb-1 block">Description</label>
+              <label className="text-xs font-semibold text-[#B1A9E5] mb-1 block">Descripción</label>
               <textarea
                 value={businessForm.description}
                 onChange={e => handleBusinessFormChange('description', e.target.value)}
-                placeholder="Tell us about your business"
+                placeholder="Cuéntanos sobre tu negocio"
                 rows={3}
                 className="w-full px-3 py-2.5 rounded-inp border border-[#B1A9E5]/30 text-sm text-[#12173B] outline-none focus:border-[#7546ED] transition-all resize-none"
               />
@@ -474,13 +474,13 @@ export default function ProfilePage() {
             <div>
               <label className="text-xs font-semibold text-[#B1A9E5] mb-1 flex items-center gap-1">
                 <MapPin size={12} />
-                Address
+                Dirección
               </label>
               <input 
                 type="text"
                 value={businessForm.address}
                 onChange={e => handleBusinessFormChange('address', e.target.value)}
-                placeholder="Business address"
+                placeholder="Dirección del negocio"
                 className="w-full px-3 py-2.5 rounded-inp border border-[#B1A9E5]/30 text-sm text-[#12173B] outline-none focus:border-[#7546ED] transition-all" 
               />
             </div>
@@ -488,13 +488,13 @@ export default function ProfilePage() {
             <div>
               <label className="text-xs font-semibold text-[#B1A9E5] mb-1 flex items-center gap-1">
                 <Phone size={12} />
-                Phone
+                Teléfono
               </label>
               <input 
                 type="tel"
                 value={businessForm.phone}
                 onChange={e => handleBusinessFormChange('phone', e.target.value)}
-                placeholder="Business phone number"
+                placeholder="Teléfono del negocio"
                 className="w-full px-3 py-2.5 rounded-inp border border-[#B1A9E5]/30 text-sm text-[#12173B] outline-none focus:border-[#7546ED] transition-all" 
               />
             </div>
@@ -506,7 +506,7 @@ export default function ProfilePage() {
               disabled={isCreatingBusiness}
               className="flex-1 py-3 rounded-btn border border-[#B1A9E5]/40 text-[#B1A9E5] font-semibold text-sm disabled:opacity-50"
             >
-              Cancel
+              Cancelar
             </button>
             <button 
               onClick={handleCreateBusiness}
@@ -516,10 +516,10 @@ export default function ProfilePage() {
               {isCreatingBusiness ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                  Creating...
+                  Creando...
                 </>
               ) : (
-                'Create Business'
+                'Crear negocio'
               )}
             </button>
           </div>
@@ -527,21 +527,21 @@ export default function ProfilePage() {
       </Modal>
 
       {/* Edit Profile Modal */}
-      <Modal open={editModal} onClose={() => setEditModal(false)} title="Edit Profile">
+      <Modal open={editModal} onClose={() => setEditModal(false)} title="Editar perfil">
         <div className="space-y-4">
           <div>
-            <label className="text-xs font-semibold text-[#B1A9E5] mb-1 block">Name</label>
+            <label className="text-xs font-semibold text-[#B1A9E5] mb-1 block">Nombre</label>
             <input 
               value={editName} 
               onChange={e => setEditName(e.target.value)} 
-              placeholder="Your name"
+              placeholder="Tu nombre"
               className="w-full px-3 py-2.5 rounded-inp border border-[#B1A9E5]/30 text-sm text-[#12173B] outline-none focus:border-[#7546ED] transition-all" 
             />
           </div>
           
           <div className="space-y-3">
             <div>
-              <label className="text-xs font-semibold text-[#B1A9E5] mb-1 block">Username</label>
+              <label className="text-xs font-semibold text-[#B1A9E5] mb-1 block">Usuario</label>
               <input 
                 value={displayUser.username} 
                 disabled
@@ -549,7 +549,7 @@ export default function ProfilePage() {
               />
             </div>
             <div>
-              <label className="text-xs font-semibold text-[#B1A9E5] mb-1 block">Email</label>
+              <label className="text-xs font-semibold text-[#B1A9E5] mb-1 block">Correo</label>
               <input 
                 value={displayUser.email} 
                 disabled
@@ -559,35 +559,35 @@ export default function ProfilePage() {
           </div>
 
           <div className="border-t border-[#B1A9E5]/10 pt-4">
-            <h3 className="font-bold text-[#12173B] text-sm mb-3">Change Password</h3>
+            <h3 className="font-bold text-[#12173B] text-sm mb-3">Cambiar contraseña</h3>
             <div className="space-y-3">
               <div>
-                <label className="text-xs font-semibold text-[#B1A9E5] mb-1 block">Current Password</label>
+                <label className="text-xs font-semibold text-[#B1A9E5] mb-1 block">Contraseña actual</label>
                 <input 
                   type="password"
                   value={currentPassword} 
                   onChange={e => setCurrentPassword(e.target.value)} 
-                  placeholder="Enter current password"
+                  placeholder="Contraseña actual"
                   className="w-full px-3 py-2.5 rounded-inp border border-[#B1A9E5]/30 text-sm text-[#12173B] outline-none focus:border-[#7546ED] transition-all" 
                 />
               </div>
               <div>
-                <label className="text-xs font-semibold text-[#B1A9E5] mb-1 block">New Password</label>
+                <label className="text-xs font-semibold text-[#B1A9E5] mb-1 block">Nueva contraseña</label>
                 <input 
                   type="password"
                   value={newPassword} 
                   onChange={e => setNewPassword(e.target.value)} 
-                  placeholder="Enter new password"
+                  placeholder="Nueva contraseña"
                   className="w-full px-3 py-2.5 rounded-inp border border-[#B1A9E5]/30 text-sm text-[#12173B] outline-none focus:border-[#7546ED] transition-all" 
                 />
               </div>
               <div>
-                <label className="text-xs font-semibold text-[#B1A9E5] mb-1 block">Confirm New Password</label>
+                <label className="text-xs font-semibold text-[#B1A9E5] mb-1 block">Confirmar nueva contraseña</label>
                 <input 
                   type="password"
                   value={confirmPassword} 
                   onChange={e => setConfirmPassword(e.target.value)} 
-                  placeholder="Confirm new password"
+                  placeholder="Confirmar nueva contraseña"
                   className="w-full px-3 py-2.5 rounded-inp border border-[#B1A9E5]/30 text-sm text-[#12173B] outline-none focus:border-[#7546ED] transition-all" 
                 />
               </div>
@@ -599,28 +599,28 @@ export default function ProfilePage() {
               onClick={() => setEditModal(false)}
               className="flex-1 py-3 rounded-btn border border-[#B1A9E5]/40 text-[#B1A9E5] font-semibold text-sm"
             >
-              Cancel
+              Cancelar
             </button>
             <button 
               onClick={handleEditProfile}
               className="flex-1 py-3 rounded-btn bg-[#7546ED] text-white font-bold text-sm"
             >
-              Save Changes
+              Guardar cambios
             </button>
           </div>
         </div>
       </Modal>
 
       {/* Logout Confirmation Modal */}
-      <Modal open={logoutModal} onClose={() => setLogoutModal(false)} title="Log Out">
+      <Modal open={logoutModal} onClose={() => setLogoutModal(false)} title="Cerrar sesión">
         <div className="space-y-4">
           <div className="text-center py-2">
             <div className="w-16 h-16 rounded-full bg-[#FF6B6B]/10 flex items-center justify-center mx-auto mb-4">
               <LogOut size={24} className="text-[#FF6B6B]" />
             </div>
-            <h3 className="font-bold text-[#12173B] text-lg mb-2">Are you sure you want to log out?</h3>
+            <h3 className="font-bold text-[#12173B] text-lg mb-2">¿Seguro que quieres cerrar sesión?</h3>
             <p className="text-[#B1A9E5] text-sm">
-              You will need to sign in again to access your account.
+              Deberás iniciar sesión nuevamente para acceder.
             </p>
           </div>
           
@@ -629,13 +629,13 @@ export default function ProfilePage() {
               onClick={() => setLogoutModal(false)}
               className="flex-1 py-3 rounded-btn border border-[#B1A9E5]/40 text-[#B1A9E5] font-semibold text-sm"
             >
-              Cancel
+              Cancelar
             </button>
             <button 
               onClick={handleLogout}
               className="flex-1 py-3 rounded-btn bg-[#FF6B6B] text-white font-bold text-sm"
             >
-              Log Out
+              Cerrar sesión
             </button>
           </div>
         </div>

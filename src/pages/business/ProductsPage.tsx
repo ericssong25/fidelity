@@ -30,7 +30,7 @@ export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeCategory, setActiveCategory] = useState('All');
+  const [activeCategory, setActiveCategory] = useState('Todos');
   const [modal, setModal] = useState(false);
   const [editName, setEditName] = useState('');
   const [editPrice, setEditPrice] = useState('');
@@ -61,13 +61,13 @@ export default function ProductsPage() {
 
       if (supabaseError) {
         console.error('Error loading products:', supabaseError);
-        setError('Failed to load products');
+        setError('Error al cargar productos');
       } else {
         setProducts(data || []);
       }
     } catch (err: any) {
       console.error('Error loading products:', err);
-      setError('Failed to load products');
+      setError('Error al cargar productos');
     } finally {
       setLoading(false);
     }
@@ -78,10 +78,10 @@ export default function ProductsPage() {
   }, [business?.id]);
 
   // Get unique categories from products
-  const categories = ['All', ...Array.from(new Set(products.map(p => p.category).filter(Boolean)))];
+  const categories = ['Todos', ...Array.from(new Set(products.map(p => p.category).filter(Boolean)))];
 
   const filtered = products.filter(p =>
-    activeCategory === 'All' || p.category === activeCategory
+    activeCategory === 'Todos' || p.category === activeCategory
   );
 
   function openAdd() {
@@ -104,12 +104,12 @@ export default function ProductsPage() {
 
   async function handleSave() {
     if (!business?.id) {
-      showToast('Business not found', 'error');
+      showToast('Negocio no encontrado', 'error');
       return;
     }
 
     if (!editName.trim() || !editPrice || !editCategory.trim()) {
-      showToast('Please fill in all required fields', 'error');
+      showToast('Completa todos los campos requeridos', 'error');
       return;
     }
 
@@ -135,7 +135,7 @@ export default function ProductsPage() {
 
         if (updateError) {
           console.error('Error updating product:', updateError);
-          showToast('Failed to update product', 'error');
+          showToast('Error al actualizar producto', 'error');
           setIsSaving(false);
           return;
         }
@@ -146,7 +146,7 @@ export default function ProductsPage() {
             ? { ...p, ...productData, id: editingId }
             : p
         ));
-        showToast('Product updated', 'success');
+        showToast('Producto actualizado', 'success');
       } else {
         // Create new product
         const { data: newProduct, error: insertError } = await supabase
@@ -157,20 +157,20 @@ export default function ProductsPage() {
 
         if (insertError || !newProduct) {
           console.error('Error creating product:', insertError);
-          showToast('Failed to create product', 'error');
+          showToast('Error al crear producto', 'error');
           setIsSaving(false);
           return;
         }
 
         // Add to local state
         setProducts(prev => [...prev, newProduct]);
-        showToast('Product created', 'success');
+        showToast('Producto creado', 'success');
       }
 
       setModal(false);
     } catch (err: any) {
       console.error('Error saving product:', err);
-      showToast('An unexpected error occurred', 'error');
+      showToast('Ocurrió un error inesperado', 'error');
     } finally {
       setIsSaving(false);
     }
@@ -190,7 +190,7 @@ export default function ProductsPage() {
 
       if (updateError) {
         console.error('Error updating availability:', updateError);
-        showToast('Failed to update availability', 'error');
+        showToast('Error al actualizar disponibilidad', 'error');
         return;
       }
 
@@ -207,10 +207,10 @@ export default function ProductsPage() {
   if (loading) {
     return (
       <div className="flex-1 p-5 pb-24 md:pb-8 overflow-y-auto">
-        <h1 className="font-extrabold text-[#12173B] text-xl mb-4">Products</h1>
+        <h1 className="font-extrabold text-[#12173B] text-xl mb-4">Productos</h1>
         <div className="text-center py-8">
           <div className="w-8 h-8 border-4 border-[#B1A9E5]/30 border-t-[#7546ED] rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-[#B1A9E5] text-sm">Loading products...</p>
+          <p className="text-[#B1A9E5] text-sm">Cargando productos...</p>
         </div>
       </div>
     );
@@ -222,14 +222,14 @@ export default function ProductsPage() {
         <h1 className="font-extrabold text-[#12173B] text-xl mb-4">Products</h1>
         <div className="text-center py-8">
           <AlertCircle size={48} className="text-red-500 mx-auto mb-4" />
-          <p className="text-red-600 text-sm font-medium mb-2">Error loading products</p>
+          <p className="text-red-600 text-sm font-medium mb-2">Error al cargar productos</p>
           <p className="text-[#B1A9E5] text-xs mb-4">{error}</p>
           <button
             onClick={loadProducts}
             className="flex items-center gap-2 mx-auto px-4 py-2 bg-[#7546ED] text-white rounded-btn text-sm font-bold"
           >
             <RefreshCw size={16} />
-            Retry
+            Reintentar
           </button>
         </div>
       </div>
@@ -239,13 +239,13 @@ export default function ProductsPage() {
   return (
     <div className="flex-1 p-5 pb-24 md:pb-8 overflow-y-auto">
       <div className="flex items-center justify-between mb-4">
-        <h1 className="font-extrabold text-[#12173B] text-xl">Products</h1>
+        <h1 className="font-extrabold text-[#12173B] text-xl">Productos</h1>
         <button
           onClick={openAdd}
           className="flex items-center gap-1.5 px-3 py-2 rounded-btn bg-[#7546ED] text-white text-xs font-bold"
         >
           <Plus size={14} />
-          Add Product
+          Agregar
         </button>
       </div>
 
@@ -272,10 +272,10 @@ export default function ProductsPage() {
             <Plus size={32} className="text-[#B1A9E5]" />
           </div>
           <p className="text-[#B1A9E5] text-sm">
-            {products.length === 0 ? 'No products yet' : 'No products in this category'}
+            {products.length === 0 ? 'Sin productos aún' : 'Sin productos en esta categoría'}
           </p>
           <p className="text-[#B1A9E5] text-xs mt-1">
-            {products.length === 0 ? 'Click "Add Product" to create your first product' : 'Try a different category'}
+            {products.length === 0 ? 'Presiona "Agregar" para crear tu primer producto' : 'Prueba otra categoría'}
           </p>
         </div>
       ) : (

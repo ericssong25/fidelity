@@ -28,26 +28,26 @@ export default function AuthPage() {
     e.preventDefault();
     
     if (!signInEmail || !signInPassword) {
-      showToast('Please fill in all fields', 'error');
+      showToast('Completa todos los campos', 'error');
       return;
     }
     
     // Basic email validation
     if (!signInEmail.includes('@')) {
-      showToast('Please enter a valid email', 'error');
+      showToast('Ingresa un email válido', 'error');
       return;
     }
     
     try {
       const success = await login(signInEmail, signInPassword);
       if (success) {
-        showToast('Signed in successfully!', 'success');
+        showToast('¡Inicio de sesión exitoso!', 'success');
         navigate('/home');
       } else {
-        showToast('Invalid email or password', 'error');
+        showToast('Email o contraseña inválidos', 'error');
       }
     } catch (error) {
-      showToast('Login failed. Please try again.', 'error');
+      showToast('Error al iniciar sesión. Intenta de nuevo.', 'error');
     }
   }
 
@@ -55,28 +55,28 @@ export default function AuthPage() {
     e.preventDefault();
     
     if (!signUpName || !signUpEmail || !signUpUsername || !signUpPassword || !signUpConfirmPassword) {
-      showToast('Please fill in all fields', 'error');
+      showToast('Completa todos los campos', 'error');
       return;
     }
     
     // Basic validations
     if (!signUpEmail.includes('@')) {
-      showToast('Please enter a valid email', 'error');
+      showToast('Ingresa un email válido', 'error');
       return;
     }
     
     if (signUpPassword.length < 6) {
-      showToast('Password must be at least 6 characters', 'error');
+      showToast('La contraseña debe tener al menos 6 caracteres', 'error');
       return;
     }
     
     if (signUpPassword !== signUpConfirmPassword) {
-      showToast('Passwords do not match', 'error');
+      showToast('Las contraseñas no coinciden', 'error');
       return;
     }
     
     if (!signUpUsername.startsWith('@') || signUpUsername === '@') {
-      showToast('Please enter a valid username after @', 'error');
+      showToast('Ingresa un nombre de usuario válido después de @', 'error');
       return;
     }
     
@@ -89,7 +89,7 @@ export default function AuthPage() {
       });
       
       if (success) {
-        showToast('Account created successfully! Please check your email to verify your account.', 'success');
+        showToast('¡Cuenta creada! Revisa tu email para verificar tu cuenta.', 'success');
         // Don't navigate immediately - let user verify email first
         // Or you can navigate to a "verify email" page
         // navigate('/home');
@@ -108,9 +108,9 @@ export default function AuthPage() {
       if (error.message?.includes('rate limit') || error.message?.includes('Too Many Requests')) {
         // Show demo mode option
         setDemoMode(true);
-        showToast('Rate limit exceeded. Try demo mode or wait a few minutes.', 'error');
+        showToast('Límite de peticiones excedido. Usa modo demo o espera unos minutos.', 'error');
       } else {
-        showToast(error.message || 'Registration failed. Please try again.', 'error');
+        showToast(error.message || 'Error al registrarse. Intenta de nuevo.', 'error');
       }
     }
   }
@@ -121,11 +121,11 @@ export default function AuthPage() {
         {/* Logo and Title */}
         <div className="text-center mb-8">
           <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#7546ED] to-[#DC89FF] flex items-center justify-center mx-auto mb-4">
-            <span className="text-white font-bold text-2xl">F</span>
+            <span className="text-white font-bold text-2xl">Z</span>
           </div>
-          <h1 className="font-extrabold text-[#12173B] text-2xl mb-2">FidelyApp</h1>
+          <h1 className="font-extrabold text-[#12173B] text-2xl mb-2">Zuma</h1>
           <p className="text-[#B1A9E5] text-sm">
-            {isSignIn ? 'Welcome back! Sign in to continue' : 'Create your account to get started'}
+            {isSignIn ? '¡Bienvenido de vuelta! Inicia sesión para continuar' : 'Crea tu cuenta para comenzar'}
           </p>
         </div>
 
@@ -141,7 +141,7 @@ export default function AuthPage() {
                   : 'text-[#B1A9E5] hover:text-[#7546ED]'
               }`}
             >
-              Sign In
+              Iniciar Sesión
             </button>
             <button
               onClick={() => setIsSignIn(false)}
@@ -151,7 +151,7 @@ export default function AuthPage() {
                   : 'text-[#B1A9E5] hover:text-[#7546ED]'
               }`}
             >
-              Sign Up
+              Registrarse
             </button>
           </div>
 
@@ -159,28 +159,28 @@ export default function AuthPage() {
           {isSignIn ? (
             <form onSubmit={handleSignIn} className="space-y-4">
               <div>
-                <label className="text-xs font-semibold text-[#B1A9E5] mb-1 block">Email</label>
+                <label className="text-xs font-semibold text-[#B1A9E5] mb-1 block">Correo electrónico</label>
                 <div className="relative">
                   <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#B1A9E5]" />
                   <input
                     type="email"
                     value={signInEmail}
                     onChange={e => setSignInEmail(e.target.value)}
-                    placeholder="Enter your email"
+                    placeholder="Ingresa tu correo"
                     className="w-full pl-10 pr-4 py-3 rounded-inp border border-[#B1A9E5]/30 text-sm text-[#12173B] placeholder-[#B1A9E5] outline-none focus:border-[#7546ED] focus:ring-2 focus:ring-[#7546ED]/10 transition-all"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-[#B1A9E5] mb-1 block">Password</label>
+                <label className="text-xs font-semibold text-[#B1A9E5] mb-1 block">Contraseña</label>
                 <div className="relative">
                   <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#B1A9E5]" />
                   <input
                     type={showPassword ? 'text' : 'password'}
                     value={signInPassword}
                     onChange={e => setSignInPassword(e.target.value)}
-                    placeholder="Enter your password"
+                    placeholder="Ingresa tu contraseña"
                     className="w-full pl-10 pr-12 py-3 rounded-inp border border-[#B1A9E5]/30 text-sm text-[#12173B] placeholder-[#B1A9E5] outline-none focus:border-[#7546ED] focus:ring-2 focus:ring-[#7546ED]/10 transition-all"
                   />
                   <button
@@ -198,42 +198,42 @@ export default function AuthPage() {
                 disabled={isLoading}
                 className="w-full py-3 rounded-btn bg-[#7546ED] text-white font-bold text-sm hover:bg-[#6B3FD8] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isLoading ? 'Signing In...' : 'Sign In'}
+                {isLoading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
               </button>
             </form>
           ) : (
             /* Sign Up Form */
             <form onSubmit={handleSignUp} className="space-y-4">
               <div>
-                <label className="text-xs font-semibold text-[#B1A9E5] mb-1 block">Full Name</label>
+                <label className="text-xs font-semibold text-[#B1A9E5] mb-1 block">Nombre completo</label>
                 <div className="relative">
                   <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#B1A9E5]" />
                   <input
                     type="text"
                     value={signUpName}
                     onChange={e => setSignUpName(e.target.value)}
-                    placeholder="Enter your full name"
+                    placeholder="Ingresa tu nombre completo"
                     className="w-full pl-10 pr-4 py-3 rounded-inp border border-[#B1A9E5]/30 text-sm text-[#12173B] placeholder-[#B1A9E5] outline-none focus:border-[#7546ED] focus:ring-2 focus:ring-[#7546ED]/10 transition-all"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-[#B1A9E5] mb-1 block">Email</label>
+                <label className="text-xs font-semibold text-[#B1A9E5] mb-1 block">Correo electrónico</label>
                 <div className="relative">
                   <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#B1A9E5]" />
                   <input
                     type="email"
                     value={signUpEmail}
                     onChange={e => setSignUpEmail(e.target.value)}
-                    placeholder="Enter your email"
+                    placeholder="Ingresa tu correo"
                     className="w-full pl-10 pr-4 py-3 rounded-inp border border-[#B1A9E5]/30 text-sm text-[#12173B] placeholder-[#B1A9E5] outline-none focus:border-[#7546ED] focus:ring-2 focus:ring-[#7546ED]/10 transition-all"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-[#B1A9E5] mb-1 block">Username</label>
+                <label className="text-xs font-semibold text-[#B1A9E5] mb-1 block">Usuario</label>
                 <div className="relative">
                   <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#B1A9E5]" />
                   <input
@@ -255,14 +255,14 @@ export default function AuthPage() {
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-[#B1A9E5] mb-1 block">Password</label>
+                <label className="text-xs font-semibold text-[#B1A9E5] mb-1 block">Contraseña</label>
                 <div className="relative">
                   <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#B1A9E5]" />
                   <input
                     type={showPassword ? 'text' : 'password'}
                     value={signUpPassword}
                     onChange={e => setSignUpPassword(e.target.value)}
-                    placeholder="Create a password"
+                    placeholder="Crea una contraseña"
                     className="w-full pl-10 pr-12 py-3 rounded-inp border border-[#B1A9E5]/30 text-sm text-[#12173B] placeholder-[#B1A9E5] outline-none focus:border-[#7546ED] focus:ring-2 focus:ring-[#7546ED]/10 transition-all"
                   />
                   <button
@@ -276,14 +276,14 @@ export default function AuthPage() {
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-[#B1A9E5] mb-1 block">Confirm Password</label>
+                <label className="text-xs font-semibold text-[#B1A9E5] mb-1 block">Confirmar contraseña</label>
                 <div className="relative">
                   <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#B1A9E5]" />
                   <input
                     type={showConfirmPassword ? 'text' : 'password'}
                     value={signUpConfirmPassword}
                     onChange={e => setSignUpConfirmPassword(e.target.value)}
-                    placeholder="Confirm your password"
+                    placeholder="Confirma tu contraseña"
                     className="w-full pl-10 pr-12 py-3 rounded-inp border border-[#B1A9E5]/30 text-sm text-[#12173B] placeholder-[#B1A9E5] outline-none focus:border-[#7546ED] focus:ring-2 focus:ring-[#7546ED]/10 transition-all"
                   />
                   <button
@@ -301,28 +301,21 @@ export default function AuthPage() {
                 disabled={isLoading}
                 className="w-full py-3 rounded-btn bg-[#7546ED] text-white font-bold text-sm hover:bg-[#6B3FD8] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isLoading ? 'Creating Account...' : 'Create Account'}
+                {isLoading ? 'Creando cuenta...' : 'Crear Cuenta'}
               </button>
             </form>
           )}
 
-          {/* Demo Account Info */}
-          <div className="mt-6 p-4 bg-[#F4F3FB] rounded-xl">
-            <p className="text-xs text-[#B1A9E5] font-semibold mb-2">Demo Account:</p>
-            <p className="text-xs text-[#12173B]">Email: sofia@email.com</p>
-            <p className="text-xs text-[#12173B]">Password: password</p>
-          </div>
-
           {/* Demo Mode for Rate Limiting */}
           {demoMode && (
             <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-xl">
-              <p className="text-xs text-yellow-800 font-semibold mb-2">Rate Limit Active</p>
-              <p className="text-xs text-yellow-700 mb-3">Supabase rate limiting is active. Try these options:</p>
+              <p className="text-xs text-yellow-800 font-semibold mb-2">Límite de peticiones activo</p>
+              <p className="text-xs text-yellow-700 mb-3">Límite de Supabase activo. Prueba estas opciones:</p>
               <div className="space-y-2">
                 <button
                   onClick={() => {
                     // Simulate successful registration
-                    showToast('Demo: Account created! Switching to sign in...', 'success');
+                    showToast('Demo: ¡Cuenta creada! Cambiando a inicio de sesión...', 'success');
                     setDemoMode(false);
                     setIsSignIn(true);
                     setSignUpName('');
@@ -333,16 +326,16 @@ export default function AuthPage() {
                   }}
                   className="w-full py-2 px-3 bg-yellow-100 text-yellow-800 rounded-lg text-xs font-medium hover:bg-yellow-200 transition-colors"
                 >
-                  Continue with Demo Mode
+                  Continuar en Modo Demo
                 </button>
                 <button
                   onClick={() => setDemoMode(false)}
                   className="w-full py-2 px-3 bg-white text-yellow-800 border border-yellow-300 rounded-lg text-xs font-medium hover:bg-yellow-50 transition-colors"
                 >
-                  Try Again Later
+                  Intentar más tarde
                 </button>
               </div>
-              <p className="text-xs text-yellow-600 mt-2">Or wait 5-10 minutes for rate limit to reset.</p>
+              <p className="text-xs text-yellow-600 mt-2">O espera 5-10 minutos para que se reinicie el límite.</p>
             </div>
           )}
         </div>
@@ -350,7 +343,7 @@ export default function AuthPage() {
         {/* Footer */}
         <div className="text-center mt-6">
           <p className="text-xs text-[#B1A9E5]">
-            By continuing, you agree to our Terms of Service and Privacy Policy
+Al continuar, aceptas nuestros Términos de Servicio y Política de Privacidad
           </p>
         </div>
       </div>

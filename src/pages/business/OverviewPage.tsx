@@ -19,10 +19,10 @@ export default function OverviewPage() {
 
   // Update KPIs with real data
   const realKpiCards = [
-    { label: 'Total Customers', value: totalCustomers, icon: Users, color: '#7546ED' },
-    { label: 'Active This Month', value: activeThisMonth, icon: TrendingUp, color: '#DC89FF' },
-    { label: 'Points Today', value: pointsToday, icon: Zap, color: '#10B981' },
-    { label: 'Redemptions', value: redemptions, icon: Gift, color: '#FF6B6B' },
+    { label: 'Clientes totales', value: totalCustomers, icon: Users, color: '#7546ED' },
+    { label: 'Activos este mes', value: activeThisMonth, icon: TrendingUp, color: '#DC89FF' },
+    { label: 'Puntos hoy', value: pointsToday, icon: Zap, color: '#10B981' },
+    { label: 'Canjes', value: redemptions, icon: Gift, color: '#FF6B6B' },
   ];
 
   if (loading) {
@@ -30,8 +30,8 @@ export default function OverviewPage() {
       <div className="flex-1 p-5 pb-24 md:pb-8 overflow-y-auto">
         <div className="text-center py-8">
           <div className="w-8 h-8 border-4 border-[#B1A9E5]/30 border-t-[#7546ED] rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-[#B1A9E5] text-sm">Loading dashboard...</p>
-          <p className="text-[#B1A9E5] text-xs mt-2">This may take a few seconds</p>
+          <p className="text-[#B1A9E5] text-sm">Cargando panel...</p>
+          <p className="text-[#B1A9E5] text-xs mt-2">Esto puede tomar unos segundos</p>
         </div>
       </div>
     );
@@ -42,14 +42,14 @@ export default function OverviewPage() {
       <div className="flex-1 p-5 pb-24 md:pb-8 overflow-y-auto">
         <div className="text-center py-8">
           <AlertCircle size={48} className="text-red-500 mx-auto mb-4" />
-          <p className="text-red-600 text-sm font-medium mb-2">Error loading data</p>
+          <p className="text-red-600 text-sm font-medium mb-2">Error al cargar datos</p>
           <p className="text-[#B1A9E5] text-xs mb-4">{error}</p>
           <button
             onClick={refresh}
             className="flex items-center gap-2 mx-auto px-4 py-2 bg-[#7546ED] text-white rounded-btn text-sm font-bold"
           >
             <RefreshCw size={16} />
-            Retry
+            Reintentar
           </button>
         </div>
       </div>
@@ -60,7 +60,7 @@ export default function OverviewPage() {
     return (
       <div className="flex-1 p-5 pb-24 md:pb-8 overflow-y-auto">
         <div className="text-center py-8">
-          <p className="text-[#B1A9E5] text-sm">No business found</p>
+          <p className="text-[#B1A9E5] text-sm">Sin negocio encontrado</p>
         </div>
       </div>
     );
@@ -71,9 +71,9 @@ export default function OverviewPage() {
       {/* Top bar */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <p className="text-[#B1A9E5] text-sm">Good morning,</p>
+          <p className="text-[#B1A9E5] text-sm">Buenos días,</p>
           <h1 className="font-extrabold text-[#12173B] text-xl flex items-center gap-1">
-            {business?.name || 'Loading...'} <span>☕</span>
+            {business?.name || 'Cargando...'} <span>☕</span>
           </h1>
         </div>
         <RoleSwitcher />

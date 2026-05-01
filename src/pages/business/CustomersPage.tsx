@@ -76,7 +76,7 @@ export default function CustomersPage() {
     setAdjustModal(false);
     setAdjustAmount('');
     setAdjustReason('');
-    showToast('Points adjusted successfully', 'success');
+    showToast('Puntos ajustados exitosamente', 'success');
   }
 
   function handleCreateCard() {
@@ -118,7 +118,7 @@ export default function CustomersPage() {
 
   function handleRegisterPurchase() {
     if (!business?.id) {
-      showToast('Business not found', 'error');
+      showToast('Negocio no encontrado', 'error');
       return;
     }
     loadProducts();
@@ -142,7 +142,7 @@ export default function CustomersPage() {
       
       if (error) {
         console.error('Error loading products:', error);
-        showToast('Failed to load products', 'error');
+        showToast('Error al cargar productos', 'error');
       } else {
         setProducts(data || []);
       }
@@ -205,12 +205,12 @@ export default function CustomersPage() {
 
   async function handleSubmitPurchase() {
     if (!business?.id || !selected) {
-      showToast('Missing business or customer information', 'error');
+      showToast('Falta información de negocio o cliente', 'error');
       return;
     }
 
     if (cart.length === 0) {
-      showToast('Please add at least one product', 'error');
+      showToast('Agrega al menos un producto', 'error');
       return;
     }
 
@@ -226,7 +226,7 @@ export default function CustomersPage() {
 
       if (cardError || !loyaltyCard) {
         console.error('Card error:', cardError);
-        showToast('Customer does not have a loyalty card', 'error');
+        showToast('El cliente no tiene tarjeta de lealtad', 'error');
         setIsProcessingPurchase(false);
         return;
       }
@@ -252,7 +252,7 @@ export default function CustomersPage() {
 
       if (purchaseError || !purchase) {
         console.error('Purchase creation error:', purchaseError);
-        showToast('Failed to create purchase', 'error');
+        showToast('Error al crear compra', 'error');
         setIsProcessingPurchase(false);
         return;
       }
@@ -273,7 +273,7 @@ export default function CustomersPage() {
 
       if (itemsError) {
         console.error('Purchase items error:', itemsError);
-        showToast('Failed to add purchase items', 'error');
+        showToast('Error al agregar items', 'error');
         setIsProcessingPurchase(false);
         return;
       }
@@ -315,7 +315,7 @@ export default function CustomersPage() {
         console.error('Card update error:', updateError);
       }
 
-      showToast(`Purchase completed! +${totalPoints} points added`, 'success');
+      showToast(`¡Compra completada! +${totalPoints} puntos agregados`, 'success');
       
       // Reset and close
       setCart([]);
@@ -327,7 +327,7 @@ export default function CustomersPage() {
 
     } catch (error) {
       console.error('Purchase processing error:', error);
-      showToast('An unexpected error occurred', 'error');
+      showToast('Ocurrió un error inesperado', 'error');
     } finally {
       setIsProcessingPurchase(false);
     }
@@ -335,12 +335,12 @@ export default function CustomersPage() {
 
   async function handleCreateLoyaltyCard() {
     if (!business?.id) {
-      showToast('Business not found', 'error');
+      showToast('Negocio no encontrado', 'error');
       return;
     }
 
     if (!selectedUser) {
-      showToast('Please select a user from the search results', 'error');
+      showToast('Selecciona un usuario de los resultados', 'error');
       return;
     }
 
@@ -356,7 +356,7 @@ export default function CustomersPage() {
         .single();
 
       if (existingCard) {
-        showToast('This user already has a card for your business', 'error');
+        showToast('Este usuario ya tiene tarjeta en tu negocio', 'error');
         return;
       }
 
@@ -373,11 +373,11 @@ export default function CustomersPage() {
 
       if (cardError) {
         console.error('Card creation error:', cardError);
-        showToast('Failed to create card. Please try again.', 'error');
+        showToast('Error al crear tarjeta. Intenta de nuevo.', 'error');
         return;
       }
 
-      showToast('Loyalty card created successfully!', 'success');
+      showToast('¡Tarjeta de lealtad creada!', 'success');
       
       // Reset form and close modal
       setUserSearch('');
@@ -468,7 +468,7 @@ export default function CustomersPage() {
             className="flex items-center gap-2 mx-auto px-4 py-2 bg-[#7546ED] text-white rounded-btn text-sm font-bold"
           >
             <RefreshCw size={16} />
-            Retry
+            Reintentar
           </button>
         </div>
       </div>
@@ -493,7 +493,7 @@ export default function CustomersPage() {
         <input
           value={search}
           onChange={e => setSearch(e.target.value)}
-          placeholder="Search by name or @username..."
+          placeholder="Buscar por nombre o @usuario..."
           className="w-full pl-9 pr-4 py-2.5 rounded-inp bg-white border border-[#B1A9E5]/20 text-sm text-[#12173B] placeholder-[#B1A9E5] outline-none focus:border-[#7546ED] transition-all"
         />
       </div>
@@ -520,8 +520,8 @@ export default function CustomersPage() {
         {loyaltyCards.length === 0 ? (
           <div className="text-center py-8">
             <CreditCard size={48} className="text-[#B1A9E5] mx-auto mb-4" />
-            <p className="text-[#B1A9E5] text-sm">No loyalty cards created yet</p>
-            <p className="text-[#B1A9E5] text-xs mt-1">Click the + button to create your first card</p>
+            <p className="text-[#B1A9E5] text-sm">Sin tarjetas de lealtad aún</p>
+            <p className="text-[#B1A9E5] text-xs mt-1">Presiona + para crear tu primera tarjeta</p>
           </div>
         ) : (
           loyaltyCards.map((card: any) => (
@@ -602,20 +602,20 @@ export default function CustomersPage() {
 
             <div className="p-5">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-bold text-[#12173B] text-sm">Transaction History</h3>
+                <h3 className="font-bold text-[#12173B] text-sm">Historial de Transacciones</h3>
                 <div className="flex gap-2">
                   <button
                     onClick={handleRegisterPurchase}
                     className="px-3 py-1.5 rounded-btn bg-[#10B981]/10 text-[#10B981] text-xs font-bold flex items-center gap-1"
                   >
                     <ShoppingCart size={12} />
-                    Register Purchase
+                    Registrar Compra
                   </button>
                   <button
                     onClick={() => setAdjustModal(true)}
                     className="px-3 py-1.5 rounded-btn bg-[#7546ED]/10 text-[#7546ED] text-xs font-bold"
                   >
-                    Adjust Points
+                    Ajustar Puntos
                   </button>
                 </div>
               </div>
@@ -623,12 +623,12 @@ export default function CustomersPage() {
                 {isLoadingTransactions ? (
                   <div className="text-center py-4">
                     <div className="w-5 h-5 border-2 border-[#B1A9E5]/30 border-t-[#7546ED] rounded-full animate-spin mx-auto"></div>
-                    <p className="text-[#B1A9E5] text-xs mt-2">Loading transactions...</p>
+                    <p className="text-[#B1A9E5] text-xs mt-2">Cargando transacciones...</p>
                   </div>
                 ) : selected.transactions.length === 0 ? (
                   <div className="text-center py-6">
-                    <p className="text-[#B1A9E5] text-sm">No transactions yet</p>
-                    <p className="text-[#B1A9E5] text-xs mt-1">Make a purchase to start earning points</p>
+                    <p className="text-[#B1A9E5] text-xs">Sin transacciones aún</p>
+                    <p className="text-[#B1A9E5] text-xs mt-1">Realiza una compra para empezar a ganar puntos</p>
                   </div>
                 ) : (
                   selected.transactions.map((tx: { id: string; description: string; date: string; points: number }) => (
@@ -652,24 +652,24 @@ export default function CustomersPage() {
         </div>
       )}
 
-      <Modal open={adjustModal} onClose={() => setAdjustModal(false)} title="Adjust Points">
+      <Modal open={adjustModal} onClose={() => setAdjustModal(false)} title="Ajustar Puntos">
         <div className="space-y-4">
           <div>
-            <label className="text-xs font-semibold text-[#B1A9E5] mb-1 block">Points Amount</label>
+            <label className="text-xs font-semibold text-[#B1A9E5] mb-1 block">Cantidad de Puntos</label>
             <input
               value={adjustAmount}
               onChange={e => setAdjustAmount(e.target.value)}
               type="number"
-              placeholder="+50 or -50"
+              placeholder="+50 o -50"
               className="w-full px-3 py-2.5 rounded-inp border border-[#B1A9E5]/30 text-sm text-[#12173B] outline-none focus:border-[#7546ED] transition-all"
             />
           </div>
           <div>
-            <label className="text-xs font-semibold text-[#B1A9E5] mb-1 block">Reason</label>
+            <label className="text-xs font-semibold text-[#B1A9E5] mb-1 block">Razón</label>
             <input
               value={adjustReason}
               onChange={e => setAdjustReason(e.target.value)}
-              placeholder="e.g. Manual correction"
+              placeholder="ej. Corrección manual"
               className="w-full px-3 py-2.5 rounded-inp border border-[#B1A9E5]/30 text-sm text-[#12173B] outline-none focus:border-[#7546ED] transition-all"
             />
           </div>
@@ -678,34 +678,34 @@ export default function CustomersPage() {
               onClick={() => setAdjustModal(false)}
               className="flex-1 py-3 rounded-btn border border-[#B1A9E5]/40 text-[#B1A9E5] font-semibold text-sm"
             >
-              Cancel
+              Cancelar
             </button>
             <button
               onClick={handleAdjust}
               className="flex-1 py-3 rounded-btn bg-[#7546ED] text-white font-bold text-sm"
             >
-              Confirm
+              Confirmar
             </button>
           </div>
         </div>
       </Modal>
 
       {/* Create Card Modal */}
-      <Modal open={cardModal} onClose={() => setCardModal(false)} title="Create Loyalty Card">
+      <Modal open={cardModal} onClose={() => setCardModal(false)} title="Crear Tarjeta de Lealtad">
         <div className="space-y-4">
           <div className="text-center py-2">
             <div className="w-16 h-16 rounded-full bg-[#7546ED]/10 flex items-center justify-center mx-auto mb-4">
               <CreditCard size={24} className="text-[#7546ED]" />
             </div>
-            <h3 className="font-bold text-[#12173B] text-lg mb-2">Create New Loyalty Card</h3>
+            <h3 className="font-bold text-[#12173B] text-lg mb-2">Crear Nueva Tarjeta</h3>
             <p className="text-[#B1A9E5] text-sm">
-              Search for a registered user to create their loyalty card
+              Busca un usuario registrado para crear su tarjeta
             </p>
           </div>
           
           <div className="space-y-3">
             <div>
-              <label className="text-xs font-semibold text-[#B1A9E5] mb-1 block">Search User</label>
+              <label className="text-xs font-semibold text-[#B1A9E5] mb-1 block">Buscar Usuario</label>
               <div className="relative">
                 <input 
                   type="text"
@@ -714,7 +714,7 @@ export default function CustomersPage() {
                     setUserSearch(e.target.value);
                     setSelectedUser(null);
                   }}
-                  placeholder="Search by name, email, or username..."
+                  placeholder="Buscar por nombre, email o usuario..."
                   className="w-full px-3 py-2.5 rounded-inp border border-[#B1A9E5]/30 text-sm text-[#12173B] outline-none focus:border-[#7546ED] transition-all" 
                 />
                 {isSearching && (
@@ -781,7 +781,7 @@ export default function CustomersPage() {
           
           <div className="bg-[#F4F3FB] rounded-lg p-3">
             <p className="text-[#B1A9E5] text-xs">
-              <strong>Note:</strong> Search for registered users by name, email, or username. Select a user to create their loyalty card.
+              <strong>Nota:</strong> Busca usuarios por nombre, email o usuario. Selecciona uno para crear su tarjeta.
             </p>
           </div>
           
@@ -796,7 +796,7 @@ export default function CustomersPage() {
               disabled={isCreatingCard}
               className="flex-1 py-3 rounded-btn border border-[#B1A9E5]/40 text-[#B1A9E5] font-semibold text-sm disabled:opacity-50"
             >
-              Cancel
+              Cancelar
             </button>
             <button 
               onClick={handleCreateLoyaltyCard}
@@ -806,10 +806,10 @@ export default function CustomersPage() {
               {isCreatingCard ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                  Creating...
+                  Creando...
                 </>
               ) : (
-                'Create Card'
+                'Crear Tarjeta'
               )}
             </button>
           </div>
@@ -817,13 +817,13 @@ export default function CustomersPage() {
       </Modal>
 
       {/* Simplified Purchase Registration Modal */}
-      <Modal open={purchaseModal} onClose={() => setPurchaseModal(false)} title="Quick Purchase">
+      <Modal open={purchaseModal} onClose={() => setPurchaseModal(false)} title="Compra Rápida">
         <div className="space-y-3 max-h-[75vh] overflow-y-auto">
           {/* Customer Info */}
           <div className="bg-[#F4F3FB] rounded-lg p-3 flex items-center justify-between">
             <div>
               <p className="text-[#12173B] font-semibold text-sm">{selected?.name}</p>
-              <p className="text-[#B1A9E5] text-xs">{selected?.points} pts • {selected?.visits} visits</p>
+              <p className="text-[#B1A9E5] text-xs">{selected?.points} pts • {selected?.visits} visitas</p>
             </div>
             {cart.length > 0 && (
               <div className="text-right">
@@ -835,12 +835,12 @@ export default function CustomersPage() {
 
           {/* Product Search */}
           <div>
-            <label className="text-xs font-semibold text-[#B1A9E5] mb-1 block">Search Product</label>
+            <label className="text-xs font-semibold text-[#B1A9E5] mb-1 block">Buscar Producto</label>
             <div className="relative">
               <input
                 value={productSearch}
                 onChange={e => setProductSearch(e.target.value)}
-                placeholder="Type product name..."
+                placeholder="Escribe nombre de producto..."
                 className="w-full pl-3 pr-9 py-2.5 rounded-inp border border-[#B1A9E5]/30 text-sm text-[#12173B] outline-none focus:border-[#7546ED] transition-all"
               />
               {productSearch && (
@@ -879,7 +879,7 @@ export default function CustomersPage() {
             )}
 
             {productSearch && filteredProducts.length === 0 && !isLoadingProducts && (
-              <p className="text-[#B1A9E5] text-xs mt-2 text-center">No products found</p>
+              <p className="text-[#B1A9E5] text-xs mt-2 text-center">Sin productos encontrados</p>
             )}
           </div>
 
@@ -892,7 +892,7 @@ export default function CustomersPage() {
                   <div key={item.id} className="flex items-center justify-between bg-white p-2 rounded-lg">
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-[#12173B] text-sm truncate">{item.name}</p>
-                      <p className="text-[#B1A9E5] text-xs">${item.price} each</p>
+                      <p className="text-[#B1A9E5] text-xs">${item.price} c/u</p>
                     </div>
                     <div className="flex items-center gap-1">
                       <button
@@ -942,7 +942,7 @@ export default function CustomersPage() {
               disabled={isProcessingPurchase}
               className="flex-1 py-3 rounded-btn border border-[#B1A9E5]/40 text-[#B1A9E5] font-semibold text-sm disabled:opacity-50"
             >
-              Cancel
+              Cancelar
             </button>
             <button
               onClick={handleSubmitPurchase}
@@ -952,7 +952,7 @@ export default function CustomersPage() {
               {isProcessingPurchase ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                  Processing...
+                  Procesando...
                 </>
               ) : (
                 <>Complete +{cartPoints} pts</>

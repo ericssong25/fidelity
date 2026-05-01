@@ -11,6 +11,7 @@ interface BusinessDataContextType {
   refreshCards: () => Promise<void>;
   updateCardInList: (card: any) => void;
   addCardToList: (card: any) => void;
+  updateBusiness: (data: any) => Promise<{ success: boolean; error?: string }>;
 }
 
 const BusinessDataContext = createContext<BusinessDataContextType | null>(null);
@@ -27,7 +28,6 @@ export function BusinessDataProvider({ children }: { children: ReactNode }) {
   const [loyaltyCards, setLoyaltyCards] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [lastFetch, setLastFetch] = useState<number>(0);
 
 
   // Initial load
@@ -94,7 +94,6 @@ export function BusinessDataProvider({ children }: { children: ReactNode }) {
           }
         }
 
-        setLastFetch(Date.now());
         setError(null);
       } catch (err: any) {
         console.error('Initial load exception:', err);
@@ -110,8 +109,6 @@ export function BusinessDataProvider({ children }: { children: ReactNode }) {
   const refresh = useCallback(async () => {
     setLoading(true);
     setError(null);
-    setLastFetch(0); // Force refresh
-
     try {
       const { data: bizData, error: bizErr } = await supabase
         .from('businesses')
@@ -157,8 +154,6 @@ export function BusinessDataProvider({ children }: { children: ReactNode }) {
           })) || []);
         }
       }
-
-      setLastFetch(Date.now());
     } catch (err: any) {
       setError(err?.message || 'Refresh failed');
     } finally {
@@ -199,7 +194,6 @@ export function BusinessDataProvider({ children }: { children: ReactNode }) {
         ...card,
         profiles: profilesMap[card.user_id] || null
       })) || []);
-      setLastFetch(Date.now());
     } catch (err: any) {
       console.error('Cards refresh exception:', err);
     }
@@ -213,6 +207,31 @@ export function BusinessDataProvider({ children }: { children: ReactNode }) {
     setLoyaltyCards(prev => [newCard, ...prev]);
   }, []);
 
+  const updateBusiness = useCallback(async (data: any): Promise<{ success: boolean; error?: string }> => {
+    if (!business?.id) {
+      return { success: false, error: 'No business found' };
+    }
+
+    try {
+      const { error: updateError } = await supabase
+        .from('businesses')
+        .update(data)
+        .eq('id', business.id);
+
+      if (updateError) {
+        console.error('Business update error:', updateError);
+        return { success: false, error: updateError.message };
+      }
+
+      // Refresh business data
+      await refresh();
+      return { success: true };
+    } catch (err: any) {
+      console.error('Update business exception:', err);
+      return { success: false, error: err?.message || 'Failed to update business' };
+    }
+  }, [business?.id, refresh]);
+
   return (
     <BusinessDataContext.Provider value={{
       business,
@@ -223,6 +242,7 @@ export function BusinessDataProvider({ children }: { children: ReactNode }) {
       refreshCards,
       updateCardInList,
       addCardToList,
+      updateBusiness,
     }}>
       {children}
     </BusinessDataContext.Provider>

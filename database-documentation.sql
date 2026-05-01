@@ -1,5 +1,5 @@
 -- ============================================
--- FIDELYAPP - DOCUMENTACIÓN COMPLETA DE BASE DE DATOS
+-- ZUMA - DOCUMENTACIÓN COMPLETA DE BASE DE DATOS
 -- Sistema de Tarjetas de Lealtad
 -- ============================================
 -- 
@@ -18,7 +18,7 @@
 -- 1. VISIÓN GENERAL DEL SISTEMA
 -- ============================================
 --
--- FidelyApp es un sistema de tarjetas de lealtad digital que permite:
+-- Zuma es un sistema de tarjetas de lealtad digital que permite:
 -- - A los negocios: Crear programas de lealtad, gestionar productos, 
 --   registrar compras y otorgar puntos a clientes
 -- - A los clientes: Acumular puntos, canjear recompensas, ver su historial

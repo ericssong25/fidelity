@@ -111,7 +111,7 @@ export default function CardsPage() {
   return (
     <div className="min-h-screen bg-[#F4F3FB] pb-24">
       <div className="sticky top-0 z-30 bg-[#F4F3FB]/95 backdrop-blur-md px-5 py-4 border-b border-[#B1A9E5]/10">
-        <h1 className="font-extrabold text-[#12173B] text-xl">My Loyalty Cards</h1>
+        <h1 className="font-extrabold text-[#12173B] text-xl">Mis Tarjetas de Lealtad</h1>
       </div>
 
       <div className="px-5 pt-5 space-y-4">
@@ -122,21 +122,21 @@ export default function CardsPage() {
             <div className="w-16 h-16 rounded-full bg-[#F4F3FB] flex items-center justify-center mx-auto mb-4">
               <span className="text-3xl">💳</span>
             </div>
-            <h3 className="font-bold text-[#12173B] text-lg mb-2">No loyalty cards yet</h3>
-            <p className="text-[#B1A9E5] text-sm">Visit businesses and start collecting points!</p>
+            <h3 className="font-bold text-[#12173B] text-lg mb-2">Sin tarjetas aún</h3>
+            <p className="text-[#B1A9E5] text-sm">¡Visita negocios y comienza a acumular puntos!</p>
             <button
               onClick={() => navigate('/explore')}
               className="mt-4 px-6 py-2 bg-[#7546ED] text-white rounded-lg font-semibold text-sm"
             >
-              Explore Businesses
+              Explorar Negocios
             </button>
           </div>
         ) : (
           userCards.map(card => {
             const business = card.businesses?.[0];
             const level = card.loyalty_levels?.[0];
-            const businessName = business?.name || 'Unknown Business';
-            const category = business?.category || 'Business';
+            const businessName = business?.name || 'Negocio Desconocido';
+            const category = business?.category || 'Negocio';
             const levelName = level?.name || 'Bronze';
             const levelColor = level?.color || '#12173B';
             
@@ -159,7 +159,7 @@ export default function CardsPage() {
                     <span className={`text-xs font-bold px-2 py-0.5 rounded-full bg-white/20 text-white`}>
                       {levelName}
                     </span>
-                    <p className="text-white/60 text-xs mt-1">{card.total_visits || 0} visits</p>
+                    <p className="text-white/60 text-xs mt-1">{card.total_visits || 0} visitas</p>
                   </div>
                 </div>
 
@@ -169,10 +169,10 @@ export default function CardsPage() {
                     <span className="text-[#7546ED] font-extrabold text-4xl leading-none">
                       {(card.current_points || 0).toLocaleString()}
                     </span>
-                    <span className="text-[#B1A9E5] text-sm mb-1">points</span>
+                    <span className="text-[#B1A9E5] text-sm mb-1">puntos</span>
                   </div>
                   <div className="text-xs text-[#B1A9E5]">
-                    Keep collecting points to reach the next level!
+                    ¡Sigue acumulando puntos para alcanzar el siguiente nivel!
                   </div>
                 </div>
               </div>
