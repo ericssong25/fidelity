@@ -51,6 +51,7 @@ export default function CustomersPage() {
   const [adjustModal, setAdjustModal] = useState(false);
   const [adjustAmount, setAdjustAmount] = useState('');
   const [adjustReason, setAdjustReason] = useState('');
+  const [isLoadingTransactions, setIsLoadingTransactions] = useState(false);
   
   // Card creation state
   const [cardModal, setCardModal] = useState(false);
@@ -80,6 +81,39 @@ export default function CustomersPage() {
 
   function handleCreateCard() {
     setCardModal(true);
+  }
+
+  async function handleSelectCustomer(customer: SelectedCustomer) {
+    setSelected(customer);
+    setIsLoadingTransactions(true);
+    
+    try {
+      // Load transactions for this customer's loyalty card
+      const { data: transactions, error } = await supabase
+        .from('point_transactions')
+        .select('*')
+        .eq('loyalty_card_id', customer.loyaltyCardId)
+        .order('created_at', { ascending: false })
+        .limit(20);
+      
+      if (error) {
+        console.error('Error loading transactions:', error);
+      } else {
+        setSelected(prev => prev ? {
+          ...prev,
+          transactions: (transactions || []).map(tx => ({
+            id: tx.id,
+            description: tx.description,
+            date: new Date(tx.created_at).toLocaleDateString(),
+            points: tx.points
+          }))
+        } : null);
+      }
+    } catch (err) {
+      console.error('Error loading transactions:', err);
+    } finally {
+      setIsLoadingTransactions(false);
+    }
   }
 
   function handleRegisterPurchase() {
@@ -244,14 +278,18 @@ export default function CustomersPage() {
         return;
       }
 
-      // 3. Create point transaction
+      // 3. Create point transaction with item descriptions
+      const itemDescriptions = cart.map(item => 
+        `${item.quantity} ${item.name}${item.quantity > 1 ? 's' : ''}`
+      ).join(', ');
+      
       const { error: transactionError } = await supabase
         .from('point_transactions')
         .insert({
           loyalty_card_id: loyaltyCard.id,
           type: 'earned',
           points: totalPoints,
-          description: `Purchase #${purchase.id.slice(0, 8)} - ${cart.length} item(s)`,
+          description: itemDescriptions,
           reference_id: purchase.id,
           reference_type: 'purchase',
           created_by: selected.id
@@ -489,18 +527,18 @@ export default function CustomersPage() {
           loyaltyCards.map((card: any) => (
             <div
               key={card.id}
-              onClick={() => setSelected({
+              onClick={() => handleSelectCustomer({
                 id: card.user_id,
                 loyaltyCardId: card.id,
                 name: card.profiles?.name || 'Unknown',
                 initials: (card.profiles?.name || 'Unknown').split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2),
-                level: 'Bronze', // TODO: Calculate based on points
+                level: 'Bronze',
                 points: card.current_points,
                 visits: card.total_visits,
                 lastVisit: new Date(card.issued_at).toLocaleDateString(),
                 username: card.profiles?.username || '',
-                transactions: [] // TODO: Load transactions
-              } as SelectedCustomer)}
+                transactions: []
+              })}
               className="bg-white rounded-2xl p-4 shadow-sm border border-[#B1A9E5]/10 flex items-center gap-3 cursor-pointer hover:shadow-md transition-all"
             >
               <div className="w-11 h-11 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0"
@@ -582,20 +620,32 @@ export default function CustomersPage() {
                 </div>
               </div>
               <div className="space-y-2">
-                {selected.transactions.map((tx: { id: string; description: string; date: string; points: number }) => (
-                  <div
-                    key={tx.id}
-                    className="flex items-center justify-between py-2 border-b border-[#B1A9E5]/10"
-                  >
-                    <div>
-                      <p className="text-[#12173B] font-semibold text-sm">{tx.description}</p>
-                      <p className="text-[#B1A9E5] text-xs">{tx.date}</p>
-                    </div>
-                    <span className={`font-extrabold text-sm ${tx.points > 0 ? 'text-[#10B981]' : 'text-[#FF6B6B]'}`}>
-                      {tx.points > 0 ? '+' : ''}{tx.points} pts
-                    </span>
+                {isLoadingTransactions ? (
+                  <div className="text-center py-4">
+                    <div className="w-5 h-5 border-2 border-[#B1A9E5]/30 border-t-[#7546ED] rounded-full animate-spin mx-auto"></div>
+                    <p className="text-[#B1A9E5] text-xs mt-2">Loading transactions...</p>
                   </div>
-                ))}
+                ) : selected.transactions.length === 0 ? (
+                  <div className="text-center py-6">
+                    <p className="text-[#B1A9E5] text-sm">No transactions yet</p>
+                    <p className="text-[#B1A9E5] text-xs mt-1">Make a purchase to start earning points</p>
+                  </div>
+                ) : (
+                  selected.transactions.map((tx: { id: string; description: string; date: string; points: number }) => (
+                    <div
+                      key={tx.id}
+                      className="flex items-center justify-between py-2 border-b border-[#B1A9E5]/10"
+                    >
+                      <div>
+                        <p className="text-[#12173B] font-semibold text-sm">{tx.description}</p>
+                        <p className="text-[#B1A9E5] text-xs">{tx.date}</p>
+                      </div>
+                      <span className={`font-extrabold text-sm ${tx.points > 0 ? 'text-[#10B981]' : 'text-[#FF6B6B]'}`}>
+                        {tx.points > 0 ? '+' : ''}{tx.points} pts
+                      </span>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           </div>

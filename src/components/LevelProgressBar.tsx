@@ -7,9 +7,16 @@ interface Props {
 }
 
 export default function LevelProgressBar({ points, levels }: Props) {
-  const maxLevel = levels[levels.length - 1];
-  const currentThreshold = [...levels].reverse().find(l => points >= l.minPoints) ?? levels[0];
-  const nextThreshold = levels.find(l => l.minPoints > points);
+  // Default levels if array is empty
+  const safeLevels = levels.length > 0 ? levels : [
+    { level: 'Bronze' as const, minPoints: 0 },
+    { level: 'Silver' as const, minPoints: 500 },
+    { level: 'Gold' as const, minPoints: 1000 }
+  ];
+  
+  const maxLevel = safeLevels[safeLevels.length - 1];
+  const currentThreshold = [...safeLevels].reverse().find(l => points >= l.minPoints) ?? safeLevels[0];
+  const nextThreshold = safeLevels.find(l => l.minPoints > points);
 
   const segmentStart = currentThreshold.minPoints;
   const segmentEnd = nextThreshold ? nextThreshold.minPoints : maxLevel.minPoints;
@@ -29,7 +36,7 @@ export default function LevelProgressBar({ points, levels }: Props) {
         />
       </div>
       <div className="flex justify-between mt-2">
-        {levels.map((l) => (
+        {safeLevels.map((l) => (
           <div key={l.level} className="flex flex-col items-center gap-0.5">
             <div
               className={`w-2 h-2 rounded-full ${points >= l.minPoints ? 'bg-[#7546ED]' : 'bg-[#B1A9E5]/40'}`}
