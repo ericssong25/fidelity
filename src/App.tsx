@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AppProvider, useApp } from './context/AppContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { BusinessDataProvider } from './context/BusinessDataContext';
@@ -25,6 +25,7 @@ import PromotionsPage from './pages/business/PromotionsPage';
 import RewardsPage from './pages/business/RewardsPage';
 import NewsPage from './pages/business/NewsPage';
 import SettingsPage from './pages/business/SettingsPage';
+import ScanPurchasePage from './pages/business/ScanPurchasePage';
 
 function CustomerLayout() {
   return (
@@ -55,6 +56,7 @@ function BusinessLayout() {
             <Route path="/business/rewards" element={<RewardsPage />} />
             <Route path="/business/news" element={<NewsPage />} />
             <Route path="/business/settings" element={<SettingsPage />} />
+            <Route path="/business/scan/:cardId" element={<ScanPurchasePage />} />
             <Route path="*" element={<Navigate to="/business/overview" replace />} />
           </Routes>
         </div>
@@ -75,8 +77,19 @@ function AuthenticatedRoutes() {
   );
 }
 
+function AuthGuard() {
+  const { isAuthenticated } = useAuth();
+  const location = useLocation();
+
+  if (isAuthenticated) {
+    return <AuthenticatedRoutes />;
+  }
+
+  return <Navigate to="/auth" replace state={{ from: location.pathname }} />;
+}
+
 function AppRoutes() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isLoading } = useAuth();
 
   useEffect(() => {
     if (!isLoading) return;
@@ -109,7 +122,7 @@ function AppRoutes() {
     <>
       <Routes>
         <Route path="/auth" element={<AuthPage />} />
-        <Route path="/*" element={isAuthenticated ? <AuthenticatedRoutes /> : <Navigate to="/auth" replace />} />
+        <Route path="/*" element={<AuthGuard />} />
       </Routes>
       <ToastContainer />
     </>

@@ -2,12 +2,14 @@ import { useState } from 'react';
 import { Eye, EyeOff, Mail, Lock, User } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 export default function AuthPage() {
   const { showToast } = useApp();
   const { login, register, isLoading } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const returnUrl = (location.state as { from?: string })?.from;
   const [isSignIn, setIsSignIn] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -42,7 +44,7 @@ export default function AuthPage() {
       const success = await login(signInEmail, signInPassword);
       if (success) {
         showToast('¡Inicio de sesión exitoso!', 'success');
-        navigate('/home');
+        navigate(returnUrl || '/home');
       } else {
         showToast('Email o contraseña inválidos', 'error');
       }

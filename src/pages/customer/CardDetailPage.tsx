@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, MapPin, Phone } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 import LevelProgressBar from '../../components/LevelProgressBar';
 import Modal from '../../components/Modal';
 import SkeletonLoader from '../../components/SkeletonLoader';
@@ -9,8 +10,8 @@ import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
 
-type Tab = 'Actividad' | 'Recompensas' | 'Info';
-const tabs: Tab[] = ['Actividad', 'Recompensas', 'Info'];
+type Tab = 'Actividad' | 'Recompensas' | 'Info' | 'Código QR';
+const tabs: Tab[] = ['Actividad', 'Recompensas', 'Info', 'Código QR'];
 
 const levelGradient: Record<string, string> = {
   Gold: 'linear-gradient(135deg, #7546ED, #DC89FF)',
@@ -512,6 +513,25 @@ export default function CardDetailPage() {
                   ))
                 )}
               </div>
+            </div>
+          </div>
+        )}
+
+        {tab === 'Código QR' && (
+          <div className="text-center py-6">
+            <div className="bg-white rounded-2xl p-6 shadow-sm border border-[#B1A9E5]/10 inline-block mx-auto">
+              <QRCodeSVG
+                value={`${window.location.origin}/business/scan/${loyaltyCard.id}`}
+                size={200}
+                level="M"
+                className="mx-auto"
+              />
+              <p className="text-[#12173B] font-semibold text-sm mt-4">
+                {business.name}
+              </p>
+              <p className="text-[#B1A9E5] text-xs mt-1 max-w-[280px]">
+                Muestra este código al dueño del negocio para que lo escanee y registre tu compra
+              </p>
             </div>
           </div>
         )}
