@@ -1,0 +1,11 @@
+## Cache headers para evitar stale code
+/*.js  Cache-Control: public, max-age=0, must-revalidate
+/*.css  Cache-Control: public, max-age=0, must-revalidate
+/index.html  Cache-Control: public, max-age=0, must-revalidate
+
+## Session storage - nunca cachear
+/auth  Cache-Control: private, no-cache, no-store
+/home  Cache-Control: private, no-cache, no-store
+/business/*  Cache-Control: private, no-cache, no-store
+/cards/*  Cache-Control: private, no-cache, no-store
+/profile  Cache-Control: private, no-cache, no-store

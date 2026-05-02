@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { AppProvider, useApp } from './context/AppContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { BusinessDataProvider } from './context/BusinessDataContext';
@@ -6,6 +6,7 @@ import BottomNav from './components/BottomNav';
 import BusinessSidebar from './components/BusinessSidebar';
 import BusinessBottomNav from './components/BusinessBottomNav';
 import ToastContainer from './components/Toast';
+import { useEffect } from 'react';
 
 // Auth
 import AuthPage from './pages/auth/AuthPage';
@@ -76,6 +77,18 @@ function AuthenticatedRoutes() {
 
 function AppRoutes() {
   const { isAuthenticated, isLoading } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!isLoading) return;
+
+    const timeoutId = setTimeout(() => {
+      console.warn('Auth loading timeout (>12s) → redirecting to /auth');
+      navigate('/auth', { replace: true });
+    }, 12000);
+
+    return () => clearTimeout(timeoutId);
+  }, [isLoading, navigate]);
 
   if (isLoading) {
     return (

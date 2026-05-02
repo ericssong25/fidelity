@@ -39,37 +39,37 @@ export function useAuth() {
 }
 
 async function buildUser(supabaseUser: SupabaseUser): Promise<User> {
-  try {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('name, username')
-      .eq('id', supabaseUser.id)
-      .maybeSingle();
+  const timeoutMs = 5000;
 
-    const name = profile?.name || supabaseUser.email?.split('@')[0] || 'User';
+  const profilePromise = supabase
+    .from('profiles')
+    .select('name, username')
+    .eq('id', supabaseUser.id)
+    .maybeSingle();
 
-    return {
-      id: supabaseUser.id,
-      name,
-      email: supabaseUser.email || '',
-      username: profile?.username || `@${supabaseUser.email?.split('@')[0]}` || '@user',
-      initials: name
-        .split(' ')
-        .map((n: string) => n[0])
-        .join('')
-        .toUpperCase()
-        .slice(0, 2),
-    };
-  } catch {
-    const name = supabaseUser.email?.split('@')[0] || 'User';
-    return {
-      id: supabaseUser.id,
-      name,
-      email: supabaseUser.email || '',
-      username: `@${supabaseUser.email?.split('@')[0] || 'user'}`,
-      initials: name.slice(0, 2).toUpperCase(),
-    };
-  }
+  const profileResult = await Promise.race([
+    profilePromise,
+    new Promise<null>((_, rej) =>
+      setTimeout(() => rej(new Error('Profile query timeout')), timeoutMs)
+    ),
+  ]).catch(() => null);
+
+  const profileData = profileResult?.data || null;
+  const name = profileData?.name || supabaseUser.email?.split('@')[0] || 'User';
+  const username = profileData?.username || `@${supabaseUser.email?.split('@')[0]}` || '@user';
+
+  return {
+    id: supabaseUser.id,
+    name,
+    email: supabaseUser.email || '',
+    username,
+    initials: name
+      .split(' ')
+      .map((n: string) => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2),
+  };
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -89,33 +89,103 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let isMounted = true;
 
-    // 1. Cargar sesión inicial
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    localStorage.removeItem('fidelity_user_backup');
+
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!isMounted) return;
-      if (session?.user) {
-        buildUser(session.user).then(userData => {
+
+      if (!session?.user) {
+        setIsLoading(false);
+        return;
+      }
+
+      const expiresAt = session.expires_at;
+      const now = Math.floor(Date.now() / 1000);
+      const fiveMinutes = 300;
+
+      if (expiresAt && expiresAt - now < fiveMinutes) {
+        const { error: refreshErr } = await supabase.auth.refreshSession();
+        if (refreshErr) {
           if (isMounted) {
-            setSupabaseUser(session.user);
-            setUser(userData);
+            setSupabaseUser(null);
+            setUser(null);
             setIsLoading(false);
           }
-        });
-      } else {
-        setIsLoading(false);
+          return;
+        }
+        session = (await supabase.auth.getSession()).data.session;
+        if (!session?.user) {
+          if (isMounted) {
+            setSupabaseUser(null);
+            setUser(null);
+            setIsLoading(false);
+          }
+          return;
+        }
+      }
+
+      const { data: { user: validatedUser }, error: userErr } = await supabase.auth.getUser();
+
+      if (userErr || !validatedUser) {
+        localStorage.removeItem('fidelity_user_backup');
+        if (isMounted) {
+          setSupabaseUser(null);
+          setUser(null);
+          setIsLoading(false);
+        }
+        return;
+      }
+
+      try {
+        const userData = await buildUser(validatedUser);
+        if (isMounted) {
+          setSupabaseUser(validatedUser);
+          setUser(userData);
+        }
+      } catch (err) {
+        console.error('buildUser error:', err);
+        const name = validatedUser.email?.split('@')[0] || 'User';
+        const fallbackUser: User = {
+          id: validatedUser.id,
+          name,
+          email: validatedUser.email || '',
+          username: `@${validatedUser.email?.split('@')[0] || 'user'}`,
+          initials: name.slice(0, 2).toUpperCase(),
+        };
+        if (isMounted) {
+          setSupabaseUser(validatedUser);
+          setUser(fallbackUser);
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
     });
 
-    // 2. Escuchar cambios de auth (SIGNED_IN, SIGNED_OUT, TOKEN_REFRESHED)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
         if (!isMounted) return;
 
         if (session?.user) {
-          const userData = await buildUser(session.user);
-          setSupabaseUser(session.user);
-          setUser(userData);
+          try {
+            const userData = await buildUser(session.user);
+            setSupabaseUser(session.user);
+            setUser(userData);
+          } catch (err) {
+            console.error('onAuthStateChange buildUser error:', err);
+            const name = session.user.email?.split('@')[0] || 'User';
+            const fallbackUser: User = {
+              id: session.user.id,
+              name,
+              email: session.user.email || '',
+              username: `@${session.user.email?.split('@')[0] || 'user'}`,
+              initials: name.slice(0, 2).toUpperCase(),
+            };
+            setSupabaseUser(session.user);
+            setUser(fallbackUser);
+          }
         } else {
-          // Sesión perdida (token expiró, logout, etc.) — limpiar estado
           setSupabaseUser(null);
           setUser(null);
         }
