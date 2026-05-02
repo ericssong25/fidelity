@@ -346,6 +346,7 @@ export default function AuthPage() {
           <p className="text-xs text-[#B1A9E5]">
 Al continuar, aceptas nuestros Términos de Servicio y Política de Privacidad
           </p>
+          <p className="text-xs text-[#B1A9E5]/60 mt-2 font-medium">Beta 1.0.0</p>
         </div>
       </div>
     </div>

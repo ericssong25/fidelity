@@ -24,7 +24,7 @@ export default function RoleSwitcher() {
         // maybeSingle tolera 0 resultados sin tirar 406
         let { data, error } = await supabase
           .from('businesses')
-          .select('id')
+          .select('id, status')
           .eq('owner_id', user.id)
           .maybeSingle();
 
@@ -37,7 +37,7 @@ export default function RoleSwitcher() {
             if (!refreshErr) {
               const retry = await supabase
                 .from('businesses')
-                .select('id')
+                .select('id, status')
                 .eq('owner_id', user.id)
                 .maybeSingle();
               data = retry.data;
@@ -50,7 +50,8 @@ export default function RoleSwitcher() {
           console.error('Error checking business ownership:', error);
         }
 
-        setHasBusiness(!!data);
+        const businessData = data as { id: string; status: string } | null;
+        setHasBusiness(!!businessData && businessData.status === 'active');
       } catch (error) {
         console.error('Error checking business ownership:', error);
         setHasBusiness(false);

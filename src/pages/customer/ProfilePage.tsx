@@ -134,7 +134,7 @@ export default function ProfilePage() {
       try {
         const { data, error } = await supabase
           .from('businesses')
-          .select('id, name')
+          .select('id, name, status')
           .eq('owner_id', user.id)
           .limit(1)
           .maybeSingle();
@@ -149,7 +149,8 @@ export default function ProfilePage() {
     { enabled: !!user?.id, timeout: 10000 }
   );
   
-  const hasBusiness = !!userBusiness;
+  const hasBusiness = !!userBusiness && userBusiness.status === 'active';
+  const businessPending = !!userBusiness && userBusiness.status === 'pending';
   
   const [editModal, setEditModal] = useState(false);
   const [logoutModal, setLogoutModal] = useState(false);
@@ -200,7 +201,8 @@ export default function ProfilePage() {
           category: businessForm.category.trim(),
           description: businessForm.description.trim(),
           address: businessForm.address.trim(),
-          phone: businessForm.phone.trim()
+          phone: businessForm.phone.trim(),
+          status: 'pending'
         })
         .select()
         .single();
@@ -378,8 +380,36 @@ export default function ProfilePage() {
         </div>
       </div>
 
+      {/* Business Pending Message */}
+      {businessPending && (
+        <div className="px-5 mt-4">
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 shadow-sm">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0">
+                <svg className="w-5 h-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <h3 className="font-bold text-amber-900 text-base mb-1">
+                  Pendiente de aprobación
+                </h3>
+                <p className="text-amber-700 text-sm leading-relaxed">
+                  Tu negocio <span className="font-semibold">"{userBusiness.name}"</span> ha sido 
+                  registrado y está siendo revisado. Podrás acceder al panel de negocio una 
+                  vez sea aprobado.
+                </p>
+                <p className="text-amber-600 text-xs mt-3 font-medium">
+                  ⏱️ Tiempo estimado: 24-48 horas
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Register Business Section - Only show if user doesn't have a business */}
-      {!hasBusiness && (
+      {!hasBusiness && !businessPending && (
         <div className="px-5 mt-4">
           <div className="bg-gradient-to-r from-[#7546ED] to-[#DC89FF] rounded-2xl p-4 shadow-sm border border-[#B1A9E5]/20">
             <div className="flex items-center justify-between">
@@ -629,6 +659,11 @@ export default function ProfilePage() {
           </div>
         </div>
       </Modal>
+
+      {/* Version */}
+      <div className="text-center pb-8 mt-4">
+        <p className="text-xs text-[#B1A9E5]/50 font-medium">Beta 1.0.0</p>
+      </div>
     </div>
   );
 }
