@@ -1,6 +1,23 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = 'https://zmrquxyihakfguzsbkfg.supabase.co';
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InptcnF1eHlpaGFrZmd1enNia2ZnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc2MDU0MzIsImV4cCI6MjA5MzE4MTQzMn0.L4ZXSfr1WmY5FoIDs47yU3f0woEGNYakEHwF43M5mjA';
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// No-op lock: evita el bug de locks huérfanos en navigator.locks
+// cuando se cambia de pestaña/ventana (issue #1594 supabase-js)
+const noOpLock = async <T>(
+  _name: string,
+  _acquireTimeout: number,
+  fn: () => Promise<T>
+): Promise<T> => {
+  return await fn();
+};
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    detectSessionInUrl: true,
+    persistSession: true,
+    storageKey: 'fidelityapp-auth',
+    lock: noOpLock,
+  }
+});

@@ -1,3 +1,4 @@
+// @refresh reset
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '../lib/supabase';
 import { User as SupabaseUser } from '@supabase/supabase-js';
@@ -25,7 +26,7 @@ interface AuthContextType {
   }) => Promise<boolean>;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function useAuth() {
   const context = useContext(AuthContext);
@@ -35,82 +36,69 @@ export function useAuth() {
   return context;
 }
 
-interface AuthProviderProps {
-  children: ReactNode;
+// Helper function to build user object from Supabase user
+async function buildUser(supabaseUser: SupabaseUser): Promise<User> {
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('name, username')
+    .eq('id', supabaseUser.id)
+    .single();
+
+  const name = profile?.name || supabaseUser.email?.split('@')[0] || 'User';
+
+  return {
+    id: supabaseUser.id,
+    name,
+    email: supabaseUser.email || '',
+    username: profile?.username || `@${supabaseUser.email?.split('@')[0]}` || '@user',
+    initials: name
+      .split(' ')
+      .map((n: string) => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2),
+  };
 }
 
-export function AuthProvider({ children }: AuthProviderProps) {
+export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [supabaseUser, setSupabaseUser] = useState<SupabaseUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Check for existing session on mount
   useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (session?.user) {
-          setSupabaseUser(session.user);
-          
-          // Get user metadata from profiles table or use defaults
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('name, username')
-            .eq('id', session.user.id)
-            .single();
-          
-          const userData: User = {
-            id: session.user.id,
-            name: profile?.name || session.user.email?.split('@')[0] || 'User',
-            email: session.user.email || '',
-            username: profile?.username || `@${session.user.email?.split('@')[0]}` || '@user',
-            initials: (profile?.name || session.user.email?.split('@')[0] || 'User')
-              .split(' ')
-              .map((n: string) => n[0])
-              .join('')
-              .toUpperCase()
-              .slice(0, 2)
-          };
-          
-          setUser(userData);
-        }
-      } catch (error) {
-        console.error('Auth check error:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+    let loadingTimeout: ReturnType<typeof setTimeout>;
+    let isRefreshing = false; // Flag para evitar llamadas concurrentes
 
-    checkAuth();
+    // Safety net: si INITIAL_SESSION no dispara en 3s, salimos del loading
+    // Esto soluciona el problema de loading infinito en PWA/iOS
+    loadingTimeout = setTimeout(() => {
+      setIsLoading(false);
+    }, 3000);
 
-    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if (event === 'SIGNED_IN' && session?.user) {
-          setSupabaseUser(session.user);
-          
-          // Get user metadata
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('name, username')
-            .eq('id', session.user.id)
-            .single();
-          
-          const userData: User = {
-            id: session.user.id,
-            name: profile?.name || session.user.email?.split('@')[0] || 'User',
-            email: session.user.email || '',
-            username: profile?.username || `@${session.user.email?.split('@')[0]}` || '@user',
-            initials: (profile?.name || session.user.email?.split('@')[0] || 'User')
-              .split(' ')
-              .map((n: string) => n[0])
-              .join('')
-              .toUpperCase()
-              .slice(0, 2)
-          };
-          
-          setUser(userData);
+        if (event === 'INITIAL_SESSION') {
+          clearTimeout(loadingTimeout); // cancelamos el timeout si llegó a tiempo
+          if (session?.user) {
+            try {
+              const userData = await buildUser(session.user);
+              setSupabaseUser(session.user);
+              setUser(userData);
+            } catch (error) {
+              console.error('Error loading user profile:', error);
+            }
+          }
+          // Siempre termina el loading en INITIAL_SESSION
+          setIsLoading(false);
+        } else if (event === 'SIGNED_IN' && session?.user) {
+          clearTimeout(loadingTimeout);
+          try {
+            const userData = await buildUser(session.user);
+            setSupabaseUser(session.user);
+            setUser(userData);
+          } catch (error) {
+            console.error('Error loading user profile:', error);
+          }
         } else if (event === 'SIGNED_OUT') {
           setUser(null);
           setSupabaseUser(null);
@@ -118,29 +106,73 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
     );
 
-    return () => subscription.unsubscribe();
+    // Reconectar cuando la pestaña vuelve a estar activa (Page Visibility API)
+    // Soluciona el problema de congelación al cambiar de pestaña/ventana
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && !isRefreshing) {
+        isRefreshing = true;
+        // Forzar refresh de la sesión cuando volvemos a la pestaña
+        supabase.auth.getSession().then(({ data: { session } }) => {
+          if (session?.user) {
+            // Verificar que el usuario en estado coincida con la sesión
+            if (!supabaseUser || supabaseUser.id !== session.user.id) {
+              buildUser(session.user).then(userData => {
+                setSupabaseUser(session.user);
+                setUser(userData);
+              });
+            }
+          } else {
+            // No hay sesión activa, limpiar estado
+            setUser(null);
+            setSupabaseUser(null);
+          }
+          isRefreshing = false;
+        }).catch(() => {
+          isRefreshing = false;
+        });
+      }
+    };
+
+    // Manejar reconexión cuando el navegador vuelve a estar online
+    const handleOnline = () => {
+      if (isRefreshing) return;
+      console.log('Browser is back online, refreshing session...');
+      isRefreshing = true;
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session?.user) {
+          buildUser(session.user).then(userData => {
+            setSupabaseUser(session.user);
+            setUser(userData);
+          });
+        }
+        isRefreshing = false;
+      }).catch(() => {
+        isRefreshing = false;
+      });
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('online', handleOnline);
+
+    return () => {
+      clearTimeout(loadingTimeout);
+      subscription.unsubscribe();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('online', handleOnline);
+    };
   }, []);
 
   const login = async (email: string, password: string): Promise<boolean> => {
-    setIsLoading(true);
-    
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
         console.error('Login error:', error);
         return false;
       }
-
       return true;
     } catch (error) {
       console.error('Login error:', error);
       return false;
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -160,10 +192,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     username: string;
     password: string;
   }): Promise<boolean> => {
-    setIsLoading(true);
-    
     try {
-      // Sign up the user
       const { error } = await supabase.auth.signUp({
         email: userData.email,
         password: userData.password,
@@ -171,46 +200,40 @@ export function AuthProvider({ children }: AuthProviderProps) {
           data: {
             name: userData.name,
             username: userData.username,
-          }
-        }
+          },
+        },
       });
 
       if (error) {
-        console.error('Registration error:', error);
-        
-        // Handle specific error types
         if (error.message?.includes('rate limit') || error.message?.includes('Too Many Requests')) {
-          throw new Error('Too many registration attempts. Please wait a few minutes before trying again.');
+          throw new Error('Too many attempts. Please wait a few minutes.');
         } else if (error.message?.includes('User already registered')) {
-          throw new Error('This email is already registered. Please try signing in instead.');
-        } else if (error.message?.includes('Password should be')) {
-          throw new Error('Password does not meet security requirements.');
+          throw new Error('This email is already registered. Try signing in instead.');
         } else {
           throw new Error(error.message || 'Registration failed. Please try again.');
         }
       }
 
-      // Note: Profile will be created automatically by the trigger
-      // No need to manually insert here
-
       return true;
     } catch (error: any) {
       console.error('Registration error:', error);
       throw error;
-    } finally {
-      setIsLoading(false);
     }
   };
 
-  const value: AuthContextType = {
-    user,
-    supabaseUser,
-    isAuthenticated: !!user,
-    isLoading,
-    login,
-    logout,
-    register
-  };
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider
+      value={{
+        user,
+        supabaseUser,
+        isAuthenticated: !!user,
+        isLoading,
+        login,
+        logout,
+        register,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
 }

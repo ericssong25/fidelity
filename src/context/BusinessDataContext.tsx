@@ -1,3 +1,4 @@
+// @refresh reset
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { useAuth } from './AuthContext';
 import { supabase } from '../lib/supabase';
@@ -14,7 +15,7 @@ interface BusinessDataContextType {
   updateBusiness: (data: any) => Promise<{ success: boolean; error?: string }>;
 }
 
-const BusinessDataContext = createContext<BusinessDataContextType | null>(null);
+export const BusinessDataContext = createContext<BusinessDataContextType | null>(null);
 
 export function useBusinessData() {
   const ctx = useContext(BusinessDataContext);
@@ -198,6 +199,47 @@ export function BusinessDataProvider({ children }: { children: ReactNode }) {
       console.error('Cards refresh exception:', err);
     }
   }, [business?.id]);
+
+  // Refrescar datos cuando se vuelve a la pestaña (Page Visibility API)
+  useEffect(() => {
+    let isRefreshingData = false;
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && user && !isRefreshingData) {
+        isRefreshingData = true;
+        // Pequeño delay para asegurar que el navegador está listo
+        setTimeout(() => {
+          refresh().finally(() => {
+            refreshCards().finally(() => {
+              isRefreshingData = false;
+            });
+          });
+        }, 500);
+      }
+    };
+
+    // Refrescar cuando vuelve a estar online
+    const handleOnline = () => {
+      if (isRefreshingData) return;
+      console.log('Connection restored, refreshing business data...');
+      if (user) {
+        isRefreshingData = true;
+        refresh().finally(() => {
+          refreshCards().finally(() => {
+            isRefreshingData = false;
+          });
+        });
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('online', handleOnline);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('online', handleOnline);
+    };
+  }, [user, refresh, refreshCards]);
 
   const updateCardInList = useCallback((updatedCard: any) => {
     setLoyaltyCards(prev => prev.map(c => c.id === updatedCard.id ? { ...c, ...updatedCard } : c));
