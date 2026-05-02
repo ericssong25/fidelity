@@ -8,12 +8,6 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useSupabaseQuery } from '../../hooks/useSupabaseQuery';
 
-const levelBadge: Record<string, string> = {
-  Gold: 'bg-gradient-to-r from-[#7546ED] to-[#DC89FF] text-white',
-  Silver: 'bg-gradient-to-r from-[#032C7D] to-[#7546ED] text-white',
-  Bronze: 'bg-gradient-to-r from-[#12173B] to-[#032C7D] text-white',
-};
-
 interface LoyaltyCardWithBusiness {
   id: string;
   card_number: string;
@@ -83,7 +77,7 @@ export default function ProfilePage() {
 
         // Get business info separately
         const businessIds = cardsOnly.map(c => c.business_id).filter(Boolean);
-        const businessesMap: Record<string, any> = {};
+        const businessesMap: Record<string, { id: string; name: string; category: string }> = {};
         
         if (businessIds.length > 0) {
           const { data: businesses } = await supabase
@@ -98,7 +92,7 @@ export default function ProfilePage() {
 
         // Get levels info separately
         const levelIds = cardsOnly.map(c => c.current_level_id).filter(Boolean);
-        const levelsMap: Record<string, any> = {};
+        const levelsMap: Record<string, { id: string; name: string; color: string }> = {};
         
         if (levelIds.length > 0) {
           const { data: levels } = await supabase
@@ -118,7 +112,7 @@ export default function ProfilePage() {
         }));
 
         return { data, error: null };
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('Error loading loyalty cards:', err);
         return { data: [], error: err };
       }
@@ -146,7 +140,7 @@ export default function ProfilePage() {
           .maybeSingle();
         
         return { data, error };
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('Error checking user business:', err);
         return { data: null, error: err };
       }
@@ -252,11 +246,6 @@ export default function ProfilePage() {
     }
     
     setEditModal(false);
-  }
-
-  function handlePasswordChange() {
-    // Function kept for future implementation - currently not used
-    console.log('Password change functionality not yet implemented');
   }
 
   function handleLogout() {

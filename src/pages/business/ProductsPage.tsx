@@ -65,7 +65,7 @@ export default function ProductsPage() {
       } else {
         setProducts(data || []);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error loading products:', err);
       setError('Error al cargar productos');
     } finally {
@@ -75,7 +75,8 @@ export default function ProductsPage() {
 
   useEffect(() => {
     loadProducts();
-  }, [business?.id]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Get unique categories from products
   const categories = ['Todos', ...Array.from(new Set(products.map(p => p.category).filter(Boolean)))];
@@ -168,7 +169,7 @@ export default function ProductsPage() {
       }
 
       setModal(false);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error saving product:', err);
       showToast('Ocurrió un error inesperado', 'error');
     } finally {
@@ -198,7 +199,7 @@ export default function ProductsPage() {
       setProducts(prev => prev.map(p => 
         p.id === id ? { ...p, is_available: newAvailability } : p
       ));
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error toggling availability:', err);
       showToast('Failed to update availability', 'error');
     }

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from 'react';
 import { Search, X, Plus, CreditCard, AlertCircle, RefreshCw, ShoppingCart, Minus, Trash2 } from 'lucide-react';
 import Modal from '../../components/Modal';

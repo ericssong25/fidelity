@@ -3,36 +3,95 @@ import { createContext, useContext, useState, useEffect, useCallback, ReactNode 
 import { useAuth } from './AuthContext';
 import { supabase } from '../lib/supabase';
 
+interface Profile {
+  id: string;
+  name: string;
+  email: string;
+  username: string;
+}
+
+interface LoyaltyCard {
+  id: string;
+  user_id: string;
+  business_id: string;
+  card_number: string;
+  current_level_id: string | null;
+  current_points: number;
+  total_points_earned: number;
+  total_visits: number;
+  is_active: boolean;
+  issued_at: string;
+  updated_at: string;
+  profiles: Profile | null;
+}
+
+interface Business {
+  id: string;
+  owner_id: string;
+  name: string;
+  category: string;
+  description: string | null;
+  address: string | null;
+  phone: string | null;
+  email: string | null;
+  website: string | null;
+  logo_url: string | null;
+  cover_url: string | null;
+  status: string;
+  created_at: string;
+  updated_at: string;
+  hours?: { day: string; hours: string; open?: string; close?: string }[];
+}
+
 interface BusinessDataContextType {
-  business: any | null;
-  loyaltyCards: any[];
+  business: Business | null;
+  loyaltyCards: LoyaltyCard[];
   loading: boolean;
   error: string | null;
   refresh: () => Promise<void>;
   refreshCards: () => Promise<void>;
-  updateCardInList: (card: any) => void;
-  addCardToList: (card: any) => void;
-  updateBusiness: (data: any) => Promise<{ success: boolean; error?: string }>;
+  updateCardInList: (card: LoyaltyCard) => void;
+  addCardToList: (card: LoyaltyCard) => void;
+  updateBusiness: (data: Partial<Business>) => Promise<{ success: boolean; error?: string }>;
 }
 
 export const BusinessDataContext = createContext<BusinessDataContextType | null>(null);
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useBusinessData() {
   const ctx = useContext(BusinessDataContext);
   if (!ctx) throw new Error('useBusinessData must be used within BusinessDataProvider');
   return ctx;
 }
 
+function isAuthError(error: unknown): boolean {
+  const err = error as Record<string, unknown> | null;
+  if (!err) return false;
+  const msg = String(err.message || '').toLowerCase();
+  return msg.includes('401') || msg.includes('jwt') || msg.includes('unauthorized');
+}
+
+// Wrapper con timeout para queries de Supabase.
+// Evita que las queries cuelguen indefinidamente cuando el JWT expiró
+// y el cliente de Supabase sigue reintentando internamente.
+function queryWithTimeout<T>(promise: PromiseLike<T>, ms: number): Promise<T> {
+  return Promise.race([
+    promise.then(v => v),
+    new Promise<never>((_, rej) => setTimeout(() => rej(new Error('Query timeout')), ms)),
+  ]);
+}
+
 export function BusinessDataProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
-  const [business, setBusiness] = useState<any | null>(null);
-  const [loyaltyCards, setLoyaltyCards] = useState<any[]>([]);
+  const [business, setBusiness] = useState<Business | null>(null);
+  const [loyaltyCards, setLoyaltyCards] = useState<LoyaltyCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-
-  // Initial load
   useEffect(() => {
+    let isMounted = true;
+    let timeoutId: ReturnType<typeof setTimeout>;
+
     const initialLoad = async () => {
       if (!user) {
         setLoading(false);
@@ -42,38 +101,57 @@ export function BusinessDataProvider({ children }: { children: ReactNode }) {
       setLoading(true);
       setError(null);
 
+      timeoutId = setTimeout(() => {
+        if (isMounted) {
+          setLoading(false);
+          setError('Timeout al cargar datos. Intenta recargar la página.');
+        }
+      }, 15000);
+
       try {
         // Fetch business
-        const { data: bizData, error: bizErr } = await supabase
-          .from('businesses')
-          .select('*')
-          .eq('owner_id', user.id)
-          .single();
+        let { data: bizData, error: bizErr } = await queryWithTimeout(
+          supabase.from('businesses').select('*').eq('owner_id', user.id).maybeSingle(),
+          8000,
+        );
 
-        if (bizErr && bizErr.code !== 'PGRST116') {
+        // Auth error → refresh session and retry once
+        if (bizErr && isAuthError(bizErr)) {
+          const { error: refreshErr } = await supabase.auth.refreshSession();
+          if (!refreshErr) {
+            const retry = await queryWithTimeout(
+              supabase.from('businesses').select('*').eq('owner_id', user.id).maybeSingle(),
+              8000,
+            );
+            bizData = retry.data;
+            bizErr = retry.error;
+          }
+        }
+
+        if (bizErr) {
           console.error('Business fetch error:', bizErr);
           setError(bizErr.message);
-          setLoading(false);
           return;
         }
 
         setBusiness(bizData || null);
 
         if (bizData?.id) {
-          // Fetch cards — NO JOIN, direct separate queries
-          const { data: cardsOnly, error: cardsError } = await supabase
-            .from('loyalty_cards')
-            .select('*')
-            .eq('business_id', bizData.id)
-            .order('issued_at', { ascending: false });
+          const { data: cardsOnly, error: cardsError } = await queryWithTimeout(
+            supabase
+              .from('loyalty_cards')
+              .select('*')
+              .eq('business_id', bizData.id)
+              .order('issued_at', { ascending: false }),
+            8000,
+          );
 
           if (cardsError) {
             console.error('Cards fetch error:', cardsError);
             setError(cardsError.message);
           } else {
-            // Get profiles
-            const userIds = cardsOnly?.map((c: any) => c.user_id).filter(Boolean) || [];
-            let profilesMap: Record<string, any> = {};
+            const userIds = cardsOnly?.map((c: LoyaltyCard) => c.user_id).filter(Boolean) || [];
+            const profilesMap: Record<string, Profile> = {};
 
             if (userIds.length > 0) {
               const { data: profiles } = await supabase
@@ -81,31 +159,40 @@ export function BusinessDataProvider({ children }: { children: ReactNode }) {
                 .select('id, name, email, username')
                 .in('id', userIds);
 
-              profiles?.forEach((p: any) => {
+              profiles?.forEach((p: Profile) => {
                 profilesMap[p.id] = p;
               });
             }
 
-            const combinedCards = cardsOnly?.map((card: any) => ({
-              ...card,
-              profiles: profilesMap[card.user_id] || null
-            })) || [];
-
-            setLoyaltyCards(combinedCards);
+            setLoyaltyCards(
+              cardsOnly?.map((card: LoyaltyCard) => ({
+                ...card,
+                profiles: profilesMap[card.user_id] || null,
+              })) || [],
+            );
           }
         }
 
         setError(null);
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('Initial load exception:', err);
-        setError(err?.message || 'Failed to load data');
+        setError(err instanceof Error ? err.message : 'Failed to load data');
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          clearTimeout(timeoutId);
+          setLoading(false);
+        }
       }
     };
 
     initialLoad();
-  }, [user?.id]); // Only re-run when user ID changes
+
+    return () => {
+      isMounted = false;
+      clearTimeout(timeoutId);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -115,11 +202,10 @@ export function BusinessDataProvider({ children }: { children: ReactNode }) {
         .from('businesses')
         .select('*')
         .eq('owner_id', user?.id)
-        .single();
+        .maybeSingle();
 
-      if (bizErr && bizErr.code !== 'PGRST116') {
+      if (bizErr) {
         setError(bizErr.message);
-        setLoading(false);
         return;
       }
 
@@ -135,8 +221,8 @@ export function BusinessDataProvider({ children }: { children: ReactNode }) {
         if (cardsError) {
           setError(cardsError.message);
         } else {
-          const userIds = cardsOnly?.map((c: any) => c.user_id).filter(Boolean) || [];
-          let profilesMap: Record<string, any> = {};
+          const userIds = cardsOnly?.map((c: LoyaltyCard) => c.user_id).filter(Boolean) || [];
+          const profilesMap: Record<string, Profile> = {};
 
           if (userIds.length > 0) {
             const { data: profiles } = await supabase
@@ -144,19 +230,21 @@ export function BusinessDataProvider({ children }: { children: ReactNode }) {
               .select('id, name, email, username')
               .in('id', userIds);
 
-            profiles?.forEach((p: any) => {
+            profiles?.forEach((p: Profile) => {
               profilesMap[p.id] = p;
             });
           }
 
-          setLoyaltyCards(cardsOnly?.map((card: any) => ({
-            ...card,
-            profiles: profilesMap[card.user_id] || null
-          })) || []);
+          setLoyaltyCards(
+            cardsOnly?.map((card: LoyaltyCard) => ({
+              ...card,
+              profiles: profilesMap[card.user_id] || null,
+            })) || [],
+          );
         }
       }
-    } catch (err: any) {
-      setError(err?.message || 'Refresh failed');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Refresh failed');
     } finally {
       setLoading(false);
     }
@@ -164,7 +252,7 @@ export function BusinessDataProvider({ children }: { children: ReactNode }) {
 
   const refreshCards = useCallback(async () => {
     if (!business?.id) return;
-    
+
     try {
       const { data: cardsOnly, error: cardsError } = await supabase
         .from('loyalty_cards')
@@ -177,8 +265,8 @@ export function BusinessDataProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      const userIds = cardsOnly?.map((c: any) => c.user_id).filter(Boolean) || [];
-      let profilesMap: Record<string, any> = {};
+      const userIds = cardsOnly?.map((c: LoyaltyCard) => c.user_id).filter(Boolean) || [];
+      const profilesMap: Record<string, Profile> = {};
 
       if (userIds.length > 0) {
         const { data: profiles } = await supabase
@@ -186,106 +274,71 @@ export function BusinessDataProvider({ children }: { children: ReactNode }) {
           .select('id, name, email, username')
           .in('id', userIds);
 
-        profiles?.forEach((p: any) => {
+        profiles?.forEach((p: Profile) => {
           profilesMap[p.id] = p;
         });
       }
 
-      setLoyaltyCards(cardsOnly?.map((card: any) => ({
-        ...card,
-        profiles: profilesMap[card.user_id] || null
-      })) || []);
-    } catch (err: any) {
+      setLoyaltyCards(
+        cardsOnly?.map((card: LoyaltyCard) => ({
+          ...card,
+          profiles: profilesMap[card.user_id] || null,
+        })) || [],
+      );
+    } catch (err: unknown) {
       console.error('Cards refresh exception:', err);
     }
   }, [business?.id]);
 
-  // Refrescar datos cuando se vuelve a la pestaña (Page Visibility API)
-  useEffect(() => {
-    let isRefreshingData = false;
-
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && user && !isRefreshingData) {
-        isRefreshingData = true;
-        // Pequeño delay para asegurar que el navegador está listo
-        setTimeout(() => {
-          refresh().finally(() => {
-            refreshCards().finally(() => {
-              isRefreshingData = false;
-            });
-          });
-        }, 500);
-      }
-    };
-
-    // Refrescar cuando vuelve a estar online
-    const handleOnline = () => {
-      if (isRefreshingData) return;
-      console.log('Connection restored, refreshing business data...');
-      if (user) {
-        isRefreshingData = true;
-        refresh().finally(() => {
-          refreshCards().finally(() => {
-            isRefreshingData = false;
-          });
-        });
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('online', handleOnline);
-
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('online', handleOnline);
-    };
-  }, [user, refresh, refreshCards]);
-
-  const updateCardInList = useCallback((updatedCard: any) => {
-    setLoyaltyCards(prev => prev.map(c => c.id === updatedCard.id ? { ...c, ...updatedCard } : c));
+  const updateCardInList = useCallback((updatedCard: LoyaltyCard) => {
+    setLoyaltyCards(prev => prev.map(c => (c.id === updatedCard.id ? { ...c, ...updatedCard } : c)));
   }, []);
 
-  const addCardToList = useCallback((newCard: any) => {
+  const addCardToList = useCallback((newCard: LoyaltyCard) => {
     setLoyaltyCards(prev => [newCard, ...prev]);
   }, []);
 
-  const updateBusiness = useCallback(async (data: any): Promise<{ success: boolean; error?: string }> => {
-    if (!business?.id) {
-      return { success: false, error: 'No business found' };
-    }
-
-    try {
-      const { error: updateError } = await supabase
-        .from('businesses')
-        .update(data)
-        .eq('id', business.id);
-
-      if (updateError) {
-        console.error('Business update error:', updateError);
-        return { success: false, error: updateError.message };
+  const updateBusiness = useCallback(
+    async (data: Partial<Business>): Promise<{ success: boolean; error?: string }> => {
+      if (!business?.id) {
+        return { success: false, error: 'No business found' };
       }
 
-      // Refresh business data
-      await refresh();
-      return { success: true };
-    } catch (err: any) {
-      console.error('Update business exception:', err);
-      return { success: false, error: err?.message || 'Failed to update business' };
-    }
-  }, [business?.id, refresh]);
+      try {
+        const { error: updateError } = await supabase
+          .from('businesses')
+          .update(data)
+          .eq('id', business.id);
+
+        if (updateError) {
+          console.error('Business update error:', updateError);
+          return { success: false, error: updateError.message };
+        }
+
+        await refresh();
+        return { success: true };
+      } catch (err: unknown) {
+        console.error('Update business exception:', err);
+        return { success: false, error: err instanceof Error ? err.message : 'Failed to update business' };
+      }
+    },
+    [business?.id, refresh],
+  );
 
   return (
-    <BusinessDataContext.Provider value={{
-      business,
-      loyaltyCards,
-      loading,
-      error,
-      refresh,
-      refreshCards,
-      updateCardInList,
-      addCardToList,
-      updateBusiness,
-    }}>
+    <BusinessDataContext.Provider
+      value={{
+        business,
+        loyaltyCards,
+        loading,
+        error,
+        refresh,
+        refreshCards,
+        updateCardInList,
+        addCardToList,
+        updateBusiness,
+      }}
+    >
       {children}
     </BusinessDataContext.Provider>
   );

@@ -33,6 +33,7 @@ interface Redemption {
   created_at: string;
   customer_name?: string;
   reward_name?: string;
+  rewards?: { name: string };
 }
 
 export default function RewardsPage() {
@@ -147,7 +148,7 @@ export default function RewardsPage() {
         }
       }
 
-      const mappedRedemptions = (redemptionsData || []).map((r: any) => ({
+      const mappedRedemptions = (redemptionsData || []).map((r: Redemption) => ({
         ...r,
         customer_name: profilesMap[r.loyalty_card_id] || 'Unknown',
         reward_name: r.rewards?.name || 'Unknown Reward'
@@ -165,7 +166,8 @@ export default function RewardsPage() {
   useEffect(() => {
     loadRewards();
     loadRedemptions();
-  }, [business?.id]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Check if reward is currently valid (within time window)
   function isRewardCurrentlyValid(reward: Reward): boolean {

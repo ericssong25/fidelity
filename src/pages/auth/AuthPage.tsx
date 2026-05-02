@@ -46,7 +46,7 @@ export default function AuthPage() {
       } else {
         showToast('Email o contraseña inválidos', 'error');
       }
-    } catch (error) {
+    } catch {
       showToast('Error al iniciar sesión. Intenta de nuevo.', 'error');
     }
   }
@@ -104,13 +104,14 @@ export default function AuthPage() {
         // Switch to sign in form
         setIsSignIn(true);
       }
-    } catch (error: any) {
-      if (error.message?.includes('rate limit') || error.message?.includes('Too Many Requests')) {
+    } catch (error: unknown) {
+      const err = error as { message?: string };
+      if (err.message?.includes('rate limit') || err.message?.includes('Too Many Requests')) {
         // Show demo mode option
         setDemoMode(true);
         showToast('Límite de peticiones excedido. Usa modo demo o espera unos minutos.', 'error');
       } else {
-        showToast(error.message || 'Error al registrarse. Intenta de nuevo.', 'error');
+        showToast(err.message || 'Error al registrarse. Intenta de nuevo.', 'error');
       }
     }
   }

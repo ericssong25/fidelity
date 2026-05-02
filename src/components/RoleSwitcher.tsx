@@ -21,13 +21,32 @@ export default function RoleSwitcher() {
       }
 
       try {
-        const { data, error } = await supabase
+        // maybeSingle tolera 0 resultados sin tirar 406
+        let { data, error } = await supabase
           .from('businesses')
           .select('id')
           .eq('owner_id', user.id)
-          .single();
+          .maybeSingle();
 
-        if (error && error.code !== 'PGRST116') { // PGRST116 is "not found"
+        // Recuperación ante error de sesión expirada
+        if (error) {
+          const msg = error.message || '';
+          if (msg.includes('401') || msg.includes('JWT') || msg.includes('invalid')) {
+            console.log('Auth error in RoleSwitcher, attempting session recovery...');
+            const { error: refreshErr } = await supabase.auth.refreshSession();
+            if (!refreshErr) {
+              const retry = await supabase
+                .from('businesses')
+                .select('id')
+                .eq('owner_id', user.id)
+                .maybeSingle();
+              data = retry.data;
+              error = retry.error;
+            }
+          }
+        }
+
+        if (error) {
           console.error('Error checking business ownership:', error);
         }
 

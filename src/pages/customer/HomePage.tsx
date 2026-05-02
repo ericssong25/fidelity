@@ -62,7 +62,7 @@ export default function HomePage() {
 
         // Get business info separately
         const businessIds = cardsOnly.map(c => c.business_id).filter(Boolean);
-        const businessesMap: Record<string, any> = {};
+        const businessesMap: Record<string, { id: string; name: string; category: string }> = {};
         
         if (businessIds.length > 0) {
           const { data: businesses } = await supabase
@@ -77,7 +77,7 @@ export default function HomePage() {
 
         // Get levels info separately
         const levelIds = cardsOnly.map(c => c.current_level_id).filter(Boolean);
-        const levelsMap: Record<string, any> = {};
+        const levelsMap: Record<string, { id: string; name: string; color: string }> = {};
         
         if (levelIds.length > 0) {
           const { data: levels } = await supabase
@@ -97,7 +97,7 @@ export default function HomePage() {
         }));
 
         return { data, error: null };
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('Error loading loyalty cards:', err);
         return { data: [], error: err };
       }

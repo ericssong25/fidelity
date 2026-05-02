@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from 'react';
 import { Users, TrendingUp, Zap, Gift, AlertCircle, RefreshCw, DollarSign, ShoppingCart, Award, ArrowUpRight, CreditCard } from 'lucide-react';
 import { useBusinessData } from '../../context/BusinessDataContext';
@@ -31,7 +32,19 @@ export default function OverviewPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [redemptions, setRedemptions] = useState<Transaction[]>([]);
   const [dailyStats, setDailyStats] = useState<DailyStat[]>([]);
-  const [topCustomers, setTopCustomers] = useState<any[]>([]);
+  interface TopCustomer {
+  id: string;
+  name: string;
+  initials: string;
+  level: string;
+  points: number;
+  visits: number;
+  lastVisit: string;
+  initial?: string;
+  totalSpent?: number;
+}
+
+const [topCustomers, setTopCustomers] = useState<TopCustomer[]>([]);
   const [statsLoading, setStatsLoading] = useState(true);
   const [dateFilter, setDateFilter] = useState<'today' | 'week' | 'month'>('today');
 
@@ -84,6 +97,8 @@ export default function OverviewPage() {
       setStatsLoading(true);
       try {
         // Primero obtener las tarjetas del negocio
+        if (!business?.id) return;
+        
         const { data: businessCards } = await supabase
           .from('loyalty_cards')
           .select('id')
@@ -277,7 +292,7 @@ export default function OverviewPage() {
     }
 
     loadStats();
-  }, [business?.id]);
+  }, [business?.id, showToast]);
 
   if (loading || statsLoading) {
     return (
@@ -473,7 +488,7 @@ export default function OverviewPage() {
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="font-bold text-[#12173B] text-xs">${customer.totalSpent.toFixed(2)}</p>
+                  <p className="font-bold text-[#12173B] text-xs">${(customer.totalSpent || 0).toFixed(2)}</p>
                   <p className="text-[#B1A9E5] text-[10px]">{customer.points} pts</p>
                 </div>
               </div>

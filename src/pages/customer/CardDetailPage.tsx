@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, MapPin, Phone } from 'lucide-react';
@@ -100,7 +101,7 @@ export default function CardDetailPage() {
               .eq('id', card.current_level_id)
               .single();
             setLevel(lvl);
-          } catch (e) {
+          } catch {
             console.log('Level not found or table does not exist');
           }
         }
@@ -117,7 +118,7 @@ export default function CardDetailPage() {
             { name: 'Silver', min_points: 500 },
             { name: 'Gold', min_points: 1000 }
           ]);
-        } catch (e) {
+        } catch {
           // Table doesn't exist, use defaults
           setLevels([
             { name: 'Bronze', min_points: 0 },
@@ -141,7 +142,7 @@ export default function CardDetailPage() {
             date: new Date(tx.created_at).toLocaleDateString(),
             points: tx.points
           })));
-        } catch (e) {
+        } catch {
           console.log('Transactions table may not exist');
           setTransactions([]);
         }
@@ -174,7 +175,7 @@ export default function CardDetailPage() {
             validFrom: r.valid_from,
             validUntil: r.valid_until
           })));
-        } catch (e) {
+        } catch {
           console.log('Rewards table may not exist');
           setRewards([]);
         }

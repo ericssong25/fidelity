@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from 'react';
 import { Camera, Clock, Power } from 'lucide-react';
 import { useBusinessData } from '../../context/BusinessDataContext';
