@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppProvider, useApp } from './context/AppContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { BusinessDataProvider } from './context/BusinessDataContext';
@@ -77,18 +77,17 @@ function AuthenticatedRoutes() {
 
 function AppRoutes() {
   const { isAuthenticated, isLoading } = useAuth();
-  const navigate = useNavigate();
 
   useEffect(() => {
     if (!isLoading) return;
 
     const timeoutId = setTimeout(() => {
-      console.warn('Auth loading timeout (>12s) → redirecting to /auth');
-      navigate('/auth', { replace: true });
+      console.warn('Auth loading timeout (>12s) → forcing reload');
+      window.location.href = '/auth';
     }, 12000);
 
     return () => clearTimeout(timeoutId);
-  }, [isLoading, navigate]);
+  }, [isLoading]);
 
   if (isLoading) {
     return (

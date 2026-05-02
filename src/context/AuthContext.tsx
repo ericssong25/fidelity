@@ -128,10 +128,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (userErr || !validatedUser) {
         localStorage.removeItem('fidelity_user_backup');
+        await supabase.auth.signOut({ scope: 'local' });
         if (isMounted) {
           setSupabaseUser(null);
           setUser(null);
           setIsLoading(false);
+          window.location.href = '/auth';
         }
         return;
       }
