@@ -10,8 +10,8 @@ import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
 
-type Tab = 'Actividad' | 'Recompensas' | 'Info' | 'Código QR';
-const tabs: Tab[] = ['Actividad', 'Recompensas', 'Info', 'Código QR'];
+type Tab = 'Mi QR' | 'Actividad' | 'Canjear' | 'Info';
+const tabs: Tab[] = ['Mi QR', 'Actividad', 'Canjear', 'Info'];
 
 const levelGradient: Record<string, string> = {
   Gold: 'linear-gradient(135deg, #7546ED, #DC89FF)',
@@ -415,6 +415,25 @@ export default function CardDetailPage() {
       </div>
 
       <div className="px-5 pt-2">
+        {tab === 'Mi QR' && (
+          <div className="text-center py-6">
+            <div className="bg-white rounded-2xl p-6 shadow-sm border border-[#B1A9E5]/10 inline-block mx-auto">
+              <QRCodeSVG
+                value={`${window.location.origin}/business/scan/${loyaltyCard.id}`}
+                size={200}
+                level="M"
+                className="mx-auto"
+              />
+              <p className="text-[#12173B] font-semibold text-sm mt-4">
+                {business.name}
+              </p>
+              <p className="text-[#B1A9E5] text-xs mt-1 max-w-[280px]">
+                Muestra este código al dueño del negocio para que lo escanee y registre tu compra
+              </p>
+            </div>
+          </div>
+        )}
+
         {tab === 'Actividad' && (
           <div className="space-y-2">
             {transactions.length === 0 ? (
@@ -445,7 +464,7 @@ export default function CardDetailPage() {
           </div>
         )}
 
-        {tab === 'Recompensas' && (
+        {tab === 'Canjear' && (
           <div className="space-y-3">
             {rewards.length === 0 ? (
               <div className="text-center py-8">
@@ -517,24 +536,6 @@ export default function CardDetailPage() {
           </div>
         )}
 
-        {tab === 'Código QR' && (
-          <div className="text-center py-6">
-            <div className="bg-white rounded-2xl p-6 shadow-sm border border-[#B1A9E5]/10 inline-block mx-auto">
-              <QRCodeSVG
-                value={`${window.location.origin}/business/scan/${loyaltyCard.id}`}
-                size={200}
-                level="M"
-                className="mx-auto"
-              />
-              <p className="text-[#12173B] font-semibold text-sm mt-4">
-                {business.name}
-              </p>
-              <p className="text-[#B1A9E5] text-xs mt-1 max-w-[280px]">
-                Muestra este código al dueño del negocio para que lo escanee y registre tu compra
-              </p>
-            </div>
-          </div>
-        )}
       </div>
 
       <Modal open={!!redeemModal} onClose={() => setRedeemModal(null)} title="Canjear Recompensa">
