@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Bell, HelpCircle, LogOut, ChevronRight, CreditCard as Edit3, Store, Building, Phone, MapPin } from 'lucide-react';
+import { HelpCircle, LogOut, ChevronRight, CreditCard as Edit3, Store, Building, Phone, MapPin } from 'lucide-react';
 import { sofia } from '../../data/mockData';
 import Modal from '../../components/Modal';
 import { useApp } from '../../context/AppContext';
@@ -31,7 +31,6 @@ interface LoyaltyCardWithBusiness {
 
 const menuItems = [
   { icon: Edit3, label: 'Editar perfil', color: 'text-[#12173B]' },
-  { icon: Bell, label: 'Notificaciones', color: 'text-[#12173B]' },
   { icon: HelpCircle, label: 'Ayuda y soporte', color: 'text-[#12173B]' },
   { icon: LogOut, label: 'Cerrar sesión', color: 'text-[#FF6B6B]' },
 ];
@@ -183,9 +182,6 @@ export default function ProfilePage() {
   const [businessModal, setBusinessModal] = useState(false);
   const [editName, setEditName] = useState(displayUser.name);
   const [editPhone, setEditPhone] = useState(displayUser.phone || '');
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   
   // Business registration form state
   const [businessForm, setBusinessForm] = useState({
@@ -635,42 +631,6 @@ export default function ProfilePage() {
                 disabled
                 className="w-full px-3 py-2.5 rounded-inp border border-[#B1A9E5]/20 text-sm text-[#B1A9E5] bg-[#F4F3FB] outline-none" 
               />
-            </div>
-          </div>
-
-          <div className="border-t border-[#B1A9E5]/10 pt-4">
-            <h3 className="font-bold text-[#12173B] text-sm mb-3">Cambiar contraseña</h3>
-            <div className="space-y-3">
-              <div>
-                <label className="text-xs font-semibold text-[#B1A9E5] mb-1 block">Contraseña actual</label>
-                <input 
-                  type="password"
-                  value={currentPassword} 
-                  onChange={e => setCurrentPassword(e.target.value)} 
-                  placeholder="Contraseña actual"
-                  className="w-full px-3 py-2.5 rounded-inp border border-[#B1A9E5]/30 text-sm text-[#12173B] outline-none focus:border-[#7546ED] transition-all" 
-                />
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-[#B1A9E5] mb-1 block">Nueva contraseña</label>
-                <input 
-                  type="password"
-                  value={newPassword} 
-                  onChange={e => setNewPassword(e.target.value)} 
-                  placeholder="Nueva contraseña"
-                  className="w-full px-3 py-2.5 rounded-inp border border-[#B1A9E5]/30 text-sm text-[#12173B] outline-none focus:border-[#7546ED] transition-all" 
-                />
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-[#B1A9E5] mb-1 block">Confirmar nueva contraseña</label>
-                <input 
-                  type="password"
-                  value={confirmPassword} 
-                  onChange={e => setConfirmPassword(e.target.value)} 
-                  placeholder="Confirmar nueva contraseña"
-                  className="w-full px-3 py-2.5 rounded-inp border border-[#B1A9E5]/30 text-sm text-[#12173B] outline-none focus:border-[#7546ED] transition-all" 
-                />
-              </div>
             </div>
           </div>
 
