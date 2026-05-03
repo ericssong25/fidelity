@@ -10,6 +10,7 @@ interface QrScannerProps {
 export default function QrScanner({ onScan, onClose }: QrScannerProps) {
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const mountedRef = useRef(true);
+  const isRunningRef = useRef(false);
   const scannerDivId = useMemo(() => `qr-scanner-${Math.random().toString(36).slice(2, 8)}`, []);
 
   useEffect(() => {
@@ -26,19 +27,20 @@ export default function QrScanner({ onScan, onClose }: QrScannerProps) {
           aspectRatio: 1,
         },
         (decodedText) => {
-          // Do NOT stop the scanner here — the cleanup will handle it
-          // when the component unmounts after navigation.
-          // Just notify the parent and let React Router unmount us.
           if (mountedRef.current) {
             onScan(decodedText);
           }
         },
         () => {
-          // Ignore intermediate scan errors (frame without QR)
+          // Ignore intermediate scan errors
         }
       )
+      .then(() => {
+        isRunningRef.current = true;
+      })
       .catch((err) => {
         console.error('Camera start error:', err);
+        isRunningRef.current = false;
         if (mountedRef.current) {
           onClose();
         }
@@ -46,23 +48,29 @@ export default function QrScanner({ onScan, onClose }: QrScannerProps) {
 
     return () => {
       mountedRef.current = false;
-      scanner
-        .stop()
-        .catch(() => {});
+      if (isRunningRef.current) {
+        scanner.stop().catch(() => {});
+        isRunningRef.current = false;
+      }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  function handleClose() {
+    mountedRef.current = false;
+    if (isRunningRef.current) {
+      scannerRef.current?.stop().catch(() => {});
+      isRunningRef.current = false;
+    }
+    onClose();
+  }
 
   return (
     <div className="fixed inset-0 z-50 bg-black flex flex-col">
       <div className="flex items-center justify-between px-5 pt-12 pb-4">
         <h2 className="text-white font-extrabold text-lg">Escanear QR</h2>
         <button
-          onClick={() => {
-            mountedRef.current = false;
-            scannerRef.current?.stop().catch(() => {});
-            onClose();
-          }}
+          onClick={handleClose}
           className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center"
         >
           <X size={18} className="text-white" />
