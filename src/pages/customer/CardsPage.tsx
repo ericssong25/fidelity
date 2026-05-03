@@ -156,7 +156,7 @@ export default function CardsPage() {
                     <p className="text-white font-extrabold text-lg leading-tight">{businessName}</p>
                   </div>
                   <div className="flex flex-col items-end">
-                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full bg-white/20 text-white`}>
+                    <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-white/20 text-white">
                       {levelName}
                     </span>
                     <p className="text-white/60 text-xs mt-1">{card.total_visits || 0} visitas</p>
@@ -165,11 +165,14 @@ export default function CardsPage() {
 
                 {/* Points & progress */}
                 <div className="px-5 py-4">
-                  <div className="flex items-end gap-1 mb-4">
+                  <div className="flex items-end gap-1 mb-2">
                     <span className="text-[#7546ED] font-extrabold text-4xl leading-none">
                       {(card.current_points || 0).toLocaleString()}
                     </span>
-                    <span className="text-[#B1A9E5] text-sm mb-1">puntos</span>
+                    <span className="text-[#B1A9E5] text-sm mb-1">disponibles</span>
+                  </div>
+                  <div className="text-xs text-[#B1A9E5] mb-1">
+                    {(card.total_points_earned || 0).toLocaleString()} pts acumulados
                   </div>
                   <div className="text-xs text-[#B1A9E5]">
                     ¡Sigue acumulando puntos para alcanzar el siguiente nivel!

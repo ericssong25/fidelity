@@ -6,7 +6,6 @@ import { sofia } from '../../data/mockData';
 import { useAuth } from '../../context/AuthContext';
 import { useSupabaseQuery } from '../../hooks/useSupabaseQuery';
 import { supabase } from '../../lib/supabase';
-import type { Level } from '../../data/mockData';
 
 interface LoyaltyCardWithBusiness {
   id: string;
@@ -32,6 +31,7 @@ interface LoyaltyCardWithBusiness {
 interface PurchaseHistory {
   id: string;
   business_name: string;
+  description: string;
   points: number;
   created_at: string;
 }
@@ -50,35 +50,6 @@ interface ActivityStats {
   total_points_earned: number;
   total_redemptions: number;
   total_points_redeemed: number;
-}
-
-interface PurchaseTransaction {
-  id: string;
-  points: number;
-  description: string;
-  created_at: string;
-  loyalty_cards: {
-    business_id: string;
-    businesses: {
-      name: string;
-    }[];
-  }[];
-}
-
-interface RedemptionTransaction {
-  id: string;
-  points_used: number;
-  status: string;
-  created_at: string;
-  rewards: {
-    name: string;
-  }[] | null;
-  loyalty_cards: {
-    business_id: string;
-    businesses: {
-      name: string;
-    }[];
-  }[];
 }
 
 export default function HomePage() {
@@ -167,16 +138,26 @@ export default function HomePage() {
       if (!user?.id) return { data: { total_purchases: 0, total_points_earned: 0, total_redemptions: 0, total_points_redeemed: 0 }, error: null };
 
       try {
+        const { data: cards } = await supabase
+          .from('loyalty_cards')
+          .select('id')
+          .eq('user_id', user.id);
+
+        const cardIds = cards?.map(c => c.id) || [];
+        if (cardIds.length === 0) {
+          return { data: { total_purchases: 0, total_points_earned: 0, total_redemptions: 0, total_points_redeemed: 0 }, error: null };
+        }
+
         const [purchasesRes, redemptionsRes] = await Promise.all([
           supabase
             .from('point_transactions')
-            .select('points, loyalty_cards!inner(user_id)')
-            .eq('loyalty_cards.user_id', user.id)
+            .select('points')
+            .in('loyalty_card_id', cardIds)
             .eq('type', 'earned'),
           supabase
             .from('reward_redemptions')
-            .select('points_used, loyalty_cards!inner(user_id)')
-            .eq('loyalty_cards.user_id', user.id)
+            .select('points_used')
+            .in('loyalty_card_id', cardIds),
         ]);
 
         const totalPurchases = purchasesRes.data?.length || 0;
@@ -208,21 +189,18 @@ export default function HomePage() {
       if (!user?.id) return { data: [], error: null };
 
       try {
+        const { data: cards } = await supabase
+          .from('loyalty_cards')
+          .select('id, business_id')
+          .eq('user_id', user.id);
+
+        const cardIds = cards?.map(c => c.id) || [];
+        if (cardIds.length === 0) return { data: [], error: null };
+
         const { data, error } = await supabase
           .from('point_transactions')
-          .select(`
-            id,
-            points,
-            description,
-            created_at,
-            loyalty_cards!inner (
-              business_id,
-              businesses (
-                name
-              )
-            )
-          `)
-          .eq('loyalty_cards.user_id', user.id)
+          .select('id, points, description, created_at, loyalty_card_id')
+          .in('loyalty_card_id', cardIds)
           .eq('type', 'earned')
           .order('created_at', { ascending: false })
           .limit(5);
@@ -232,9 +210,31 @@ export default function HomePage() {
           return { data: [], error };
         }
 
-        const purchases: PurchaseHistory[] = (data || []).map((tx: PurchaseTransaction) => ({
+        const businessIds = [...new Set((cards || []).map(c => c.business_id).filter(Boolean))];
+        const businessesMap: Record<string, string> = {};
+
+        if (businessIds.length > 0) {
+          const { data: bizData } = await supabase
+            .from('businesses')
+            .select('id, name')
+            .in('id', businessIds);
+          bizData?.forEach((b: { id: string; name: string }) => {
+            businessesMap[b.id] = b.name;
+          });
+        }
+
+        // Map card_id -> business_id for lookup
+        const cardBusinessMap: Record<string, string> = {};
+        cards?.forEach((c: { id: string; business_id: string }) => {
+          cardBusinessMap[c.id] = c.business_id;
+        });
+
+        const purchases: PurchaseHistory[] = (data || []).map((tx: {
+          id: string; points: number; description: string; created_at: string; loyalty_card_id: string;
+        }) => ({
           id: tx.id,
-          business_name: tx.loyalty_cards?.[0]?.businesses?.[0]?.name || 'Negocio',
+          business_name: businessesMap[cardBusinessMap[tx.loyalty_card_id]] || 'Negocio',
+          description: tx.description || '',
           points: tx.points,
           created_at: tx.created_at,
         }));
@@ -255,24 +255,18 @@ export default function HomePage() {
       if (!user?.id) return { data: [], error: null };
 
       try {
+        const { data: cards } = await supabase
+          .from('loyalty_cards')
+          .select('id, business_id')
+          .eq('user_id', user.id);
+
+        const cardIds = cards?.map(c => c.id) || [];
+        if (cardIds.length === 0) return { data: [], error: null };
+
         const { data, error } = await supabase
           .from('reward_redemptions')
-          .select(`
-            id,
-            points_used,
-            status,
-            created_at,
-            rewards (
-              name
-            ),
-            loyalty_cards!inner (
-              business_id,
-              businesses (
-                name
-              )
-            )
-          `)
-          .eq('loyalty_cards.user_id', user.id)
+          .select('id, points_used, status, created_at, reward_id, loyalty_card_id')
+          .in('loyalty_card_id', cardIds)
           .order('created_at', { ascending: false })
           .limit(5);
 
@@ -281,12 +275,48 @@ export default function HomePage() {
           return { data: [], error };
         }
 
-        const redemptions: RedemptionHistory[] = (data || []).map((rr: RedemptionTransaction) => ({
+        // Fetch reward names
+        const rewardIds = [...new Set((data || []).map((r: { reward_id: string }) => r.reward_id).filter(Boolean))];
+        const rewardsMap: Record<string, string> = {};
+
+        if (rewardIds.length > 0) {
+          const { data: rewardsData } = await supabase
+            .from('rewards')
+            .select('id, name')
+            .in('id', rewardIds);
+          rewardsData?.forEach((r: { id: string; name: string }) => {
+            rewardsMap[r.id] = r.name;
+          });
+        }
+
+        // Fetch business names
+        const businessIds = [...new Set((cards || []).map(c => c.business_id).filter(Boolean))];
+        const businessesMap: Record<string, string> = {};
+
+        if (businessIds.length > 0) {
+          const { data: bizData } = await supabase
+            .from('businesses')
+            .select('id, name')
+            .in('id', businessIds);
+          bizData?.forEach((b: { id: string; name: string }) => {
+            businessesMap[b.id] = b.name;
+          });
+        }
+
+        // Map card_id -> business_id
+        const cardBusinessMap: Record<string, string> = {};
+        cards?.forEach((c: { id: string; business_id: string }) => {
+          cardBusinessMap[c.id] = c.business_id;
+        });
+
+        const redemptions: RedemptionHistory[] = (data || []).map((rr: {
+          id: string; points_used: number; status: string; created_at: string; reward_id: string; loyalty_card_id: string;
+        }) => ({
           id: rr.id,
-          reward_name: rr.rewards?.[0]?.name || 'Recompensa',
+          reward_name: rewardsMap[rr.reward_id] || 'Recompensa',
           points_used: rr.points_used,
           status: rr.status as 'pending' | 'claimed' | 'expired',
-          business_name: rr.loyalty_cards?.[0]?.businesses?.[0]?.name || 'Negocio',
+          business_name: businessesMap[cardBusinessMap[rr.loyalty_card_id]] || 'Negocio',
           created_at: rr.created_at,
         }));
 
@@ -367,7 +397,8 @@ export default function HomePage() {
             ) : (
               userCards.map(card => {
                 const businessName = card.businesses?.[0]?.name || 'Unknown';
-                const levelName = (card.loyalty_levels?.[0]?.name || 'Bronze') as Level;
+                const levelName = card.loyalty_levels?.[0]?.name || 'Bronze';
+                const levelColor = card.loyalty_levels?.[0]?.color;
                 return (
                   <div
                     key={card.id}
@@ -376,8 +407,10 @@ export default function HomePage() {
                   >
                     <LoyaltyCard
                       businessName={businessName}
-                      points={card.current_points || 0}
+                      currentPoints={card.current_points || 0}
+                      totalPointsEarned={card.total_points_earned || 0}
                       level={levelName}
+                      levelColor={levelColor}
                       visits={card.total_visits || 0}
                     />
                   </div>
@@ -434,7 +467,7 @@ export default function HomePage() {
                   <div className="text-lg font-extrabold text-[#12173B]">{statsLoading ? (
                     <div className="w-12 h-5 bg-[#B1A9E5]/20 rounded animate-pulse"></div>
                   ) : (
-                    `-${stats.total_points_redeemed}`
+                    stats.total_points_redeemed.toLocaleString()
                   )}</div>
                   <div className="text-[#B1A9E5] text-xs font-medium">Puntos canjeados</div>
                 </div>
@@ -499,6 +532,9 @@ export default function HomePage() {
                         </div>
                         <div>
                           <p className="font-bold text-[#12173B] text-sm">{purchase.business_name}</p>
+                          {purchase.description && (
+                            <p className="text-[#B1A9E5] text-xs">{purchase.description}</p>
+                          )}
                           <p className="text-[#B1A9E5] text-xs">{dateStr}</p>
                         </div>
                       </div>
@@ -566,8 +602,10 @@ export default function HomePage() {
                 const statusLabels = {
                   pending: 'Pendiente',
                   claimed: 'Reclamado',
-                  expired: 'Expirado',
+                  expired: 'Cancelado',
                 };
+
+                const isCancelled = redemption.status === 'expired';
 
                 return (
                   <div
@@ -581,11 +619,14 @@ export default function HomePage() {
                         </div>
                         <div>
                           <p className="font-bold text-[#12173B] text-sm">{redemption.reward_name}</p>
+                          <p className="text-[#B1A9E5] text-xs">{redemption.business_name}</p>
                           <p className="text-[#B1A9E5] text-xs">{dateStr}</p>
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="font-bold text-[#F59E0B] text-sm">-{redemption.points_used} pts</p>
+                        <p className={`font-bold text-sm ${isCancelled ? 'text-[#10B981]' : 'text-[#F59E0B]'}`}>
+                          {isCancelled ? `+${redemption.points_used}` : `-${redemption.points_used}`} pts
+                        </p>
                         <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium mt-1 ${statusColors[redemption.status]}`}>
                           {statusLabels[redemption.status]}
                         </span>

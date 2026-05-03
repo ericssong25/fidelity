@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, MapPin, Phone } from 'lucide-react';
+import { ArrowLeft, MapPin, Phone, Lock, Check, Zap, Percent, Gift, Star, Crown, Clock } from 'lucide-react';
 import LevelProgressBar from '../../components/LevelProgressBar';
 import Modal from '../../components/Modal';
 import SkeletonLoader from '../../components/SkeletonLoader';
@@ -9,8 +9,8 @@ import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
 
-type Tab = 'Actividad' | 'Canjear' | 'Info';
-const tabs: Tab[] = ['Actividad', 'Canjear', 'Info'];
+type Tab = 'Detalles' | 'Actividad' | 'Canjear' | 'Info';
+const tabs: Tab[] = ['Detalles', 'Actividad', 'Canjear', 'Info'];
 
 const levelGradient: Record<string, string> = {
   Gold: 'linear-gradient(135deg, #7546ED, #DC89FF)',
@@ -36,6 +36,7 @@ interface Reward {
   quantityAvailable: number | null;
   validFrom: string | null;
   validUntil: string | null;
+  minLevel: string | null;
 }
 
 export default function CardDetailPage() {
@@ -43,8 +44,8 @@ export default function CardDetailPage() {
   const navigate = useNavigate();
   const { showToast } = useApp();
   const { user } = useAuth();
-  const [tab, setTab] = useState<Tab>('Actividad');
-  const [redeemModal, setRedeemModal] = useState<{ id: string; name: string; cost: number } | null>(null);
+  const [tab, setTab] = useState<Tab>('Detalles');
+  const [redeemModal, setRedeemModal] = useState<{ id: string; name: string; cost: number; description?: string | null } | null>(null);
   const [isRedeeming, setIsRedeeming] = useState(false);
   
   // Data states
@@ -155,13 +156,10 @@ export default function CardDetailPage() {
             .eq('business_id', businessId)
             .eq('is_available', true);
           
-          // Filter rewards that are currently valid (within time window and have stock)
+           // Filter rewards — keep all, we'll sort/display in the Canjear tab
           const validRewards = (rws || []).filter((r: any) => {
-            // Check time validity
+            // Check time validity — still filter not-yet-started
             if (r.valid_from && new Date(r.valid_from) > new Date()) return false;
-            if (r.valid_until && new Date(r.valid_until) < new Date()) return false;
-            // Check stock if limited
-            if (r.is_limited && r.quantity_available !== null && r.quantity_available <= 0) return false;
             return true;
           });
           
@@ -173,7 +171,8 @@ export default function CardDetailPage() {
             isLimited: r.is_limited,
             quantityAvailable: r.quantity_available,
             validFrom: r.valid_from,
-            validUntil: r.valid_until
+            validUntil: r.valid_until,
+            minLevel: r.min_level || null
           })));
         } catch {
           console.log('Rewards table may not exist');
@@ -254,12 +253,29 @@ export default function CardDetailPage() {
 
   async function handleRedeem() {
     if (!redeemModal || !loyaltyCard?.id) return;
-    
+
     const currentPoints = loyaltyCard.current_points || 0;
     if (currentPoints < redeemModal.cost) {
       showToast('Puntos insuficientes', 'error');
       setRedeemModal(null);
       return;
+    }
+
+    // Level check
+    const reward = rewards.find(r => r.id === redeemModal.id);
+    if (reward?.minLevel) {
+      const loyaltyLevels = (business as Record<string, unknown> | null)?.loyalty_levels as Array<{ name: string }> | undefined;
+      const levelOrder: Record<string, number> = {};
+      if (loyaltyLevels) {
+        loyaltyLevels.forEach((l, i) => { levelOrder[l.name] = i; });
+      }
+      const currentLevelIndex = levelOrder[loyaltyCard.current_level] ?? -1;
+      const requiredLevelIndex = levelOrder[reward.minLevel] ?? 0;
+      if (currentLevelIndex < requiredLevelIndex) {
+        showToast(`Necesitas nivel ${reward.minLevel} para canjear esta recompensa`, 'error');
+        setRedeemModal(null);
+        return;
+      }
     }
     
     setIsRedeeming(true);
@@ -333,7 +349,7 @@ export default function CardDetailPage() {
         ).filter(r => !r.isLimited || (r.quantityAvailable || 0) > 0));
       }
       
-      showToast(`¡Recompensa canjeada! Código: ${redemptionCode}`, 'success');
+      showToast(`¡${redeemModal.name} canjeado!`, 'success');
       setRedeemModal(null);
       
       // Refresh transactions
@@ -377,17 +393,21 @@ export default function CardDetailPage() {
         <h1 className="text-2xl font-extrabold text-white mt-0.5">{business.name}</h1>
 
         <div className="flex items-end gap-2 mt-4">
-          <span className="text-white font-extrabold text-5xl leading-none">
-            {(loyaltyCard.current_points || 0).toLocaleString()}
-          </span>
-          <span className="text-white/60 text-sm mb-1">puntos</span>
+          <div>
+            <span className="text-white font-extrabold text-5xl leading-none">
+              {(loyaltyCard.current_points || 0).toLocaleString()}
+            </span>
+            <span className="text-white/60 text-sm ml-2">pts disponibles</span>
+          </div>
+        </div>
+        <div className="text-white/50 text-xs mt-1">
+          {(loyaltyCard.total_points_earned || 0).toLocaleString()} pts acumulados
         </div>
 
         <div className="mt-3">
           <LevelProgressBar
-            points={loyaltyCard.current_points || 0}
-            level={levelName as any}
-            levels={levels.map((l: any) => ({ level: l.name, minPoints: l.min_points }))}
+            points={loyaltyCard.total_points_earned || 0}
+            levels={levels.map((l: any) => ({ name: l.name, min_points: l.min_points, color: l.color }))}
           />
         </div>
 
@@ -414,6 +434,149 @@ export default function CardDetailPage() {
       </div>
 
       <div className="px-5 pt-2">
+        {tab === 'Detalles' && (() => {
+          const loyaltyLevels = (business as Record<string, unknown> | null)?.loyalty_levels as Array<{
+            name: string; min_points: number; color: string; multiplier: number;
+            discount_percent: number; perks: string[];
+          }> | undefined;
+
+          const currentLevelName = loyaltyCard.current_level || 'Bronze';
+          const currentIndex = loyaltyLevels
+            ? loyaltyLevels.findIndex(l => l.name === currentLevelName)
+            : 0;
+          const currentLevel = loyaltyLevels && currentIndex >= 0
+            ? loyaltyLevels[currentIndex]
+            : { name: currentLevelName, min_points: 0, color: '#CD7F32', multiplier: 1, discount_percent: 0, perks: [] };
+          const isMaxLevel = !loyaltyLevels || currentIndex >= loyaltyLevels.length - 1;
+
+          const totalPoints = loyaltyCard.total_points_earned || 0;
+
+          return (
+            <div className="space-y-5">
+              {/* Benefits section */}
+              <div>
+                <h3 className="font-extrabold text-[#12173B] text-base mb-3">
+                  Tus beneficios
+                </h3>
+
+                {currentLevel.multiplier > 1 && (
+                  <div
+                    className="rounded-2xl p-4 shadow-sm flex items-center gap-3 mb-3"
+                    style={{
+                      background: `linear-gradient(135deg, ${currentLevel.color || '#7546ED'}20, ${currentLevel.color || '#7546ED'}08)`,
+                      borderLeft: `4px solid ${currentLevel.color || '#7546ED'}`,
+                    }}
+                  >
+                    <div
+                      className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                      style={{ background: `${currentLevel.color || '#7546ED'}25` }}
+                    >
+                      <Zap size={20} style={{ color: currentLevel.color || '#7546ED' }} />
+                    </div>
+                    <p className="text-sm font-extrabold text-[#12173B]">
+                      Ganas {currentLevel.multiplier}x puntos por cada compra
+                    </p>
+                  </div>
+                )}
+
+                {currentLevel.discount_percent > 0 && (
+                  <div
+                    className="rounded-2xl p-4 shadow-sm flex items-center gap-3 mb-3"
+                    style={{
+                      background: `linear-gradient(135deg, ${currentLevel.color || '#7546ED'}20, ${currentLevel.color || '#7546ED'}08)`,
+                      borderLeft: `4px solid ${currentLevel.color || '#7546ED'}`,
+                    }}
+                  >
+                    <div
+                      className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                      style={{ background: `${currentLevel.color || '#7546ED'}25` }}
+                    >
+                      <Percent size={20} style={{ color: currentLevel.color || '#7546ED' }} />
+                    </div>
+                    <p className="text-sm font-extrabold text-[#12173B]">
+                      {currentLevel.discount_percent}% descuento permanente
+                    </p>
+                  </div>
+                )}
+
+                {currentLevel.perks && currentLevel.perks.length > 0 && (
+                  <div className="space-y-2">
+                    {currentLevel.perks.map((perk: string, i: number) => (
+                      <div
+                        key={i}
+                        className="rounded-2xl p-4 shadow-sm flex items-center gap-3"
+                        style={{
+                          background: `linear-gradient(135deg, ${currentLevel.color || '#7546ED'}08, transparent)`,
+                          borderLeft: `3px solid ${currentLevel.color || '#7546ED'}`,
+                        }}
+                      >
+                        <Check size={16} className="text-[#10B981] flex-shrink-0" />
+                        <span className="text-sm font-bold text-[#12173B]">{perk}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Next levels section */}
+              {!isMaxLevel && loyaltyLevels && (
+                <div>
+                  <h3 className="font-extrabold text-[#12173B] text-base mb-3">
+                    Próximos niveles
+                  </h3>
+
+                  <div className="space-y-3">
+                    {loyaltyLevels.slice(currentIndex + 1).map((nl) => {
+                      const ptsNeeded = Math.max(0, (nl.min_points || 0) - totalPoints);
+                      return (
+                        <div
+                          key={nl.name}
+                          className="rounded-2xl shadow-sm overflow-hidden opacity-85"
+                          style={{ borderLeft: `4px solid ${nl.color || '#B1A9E5'}` }}
+                        >
+                          <div
+                            className="h-1"
+                            style={{
+                              background: `linear-gradient(90deg, ${nl.color || '#B1A9E5'}15, transparent)`,
+                            }}
+                          />
+                          <div className="bg-white p-4">
+                            <div className="flex items-center gap-2 mb-3">
+                              <div
+                                className="w-3 h-3 rounded-full flex-shrink-0"
+                                style={{ background: nl.color }}
+                              />
+                              <span className="font-bold text-sm text-[#12173B]">{nl.name}</span>
+                              <span className="text-xs text-[#B1A9E5]">
+                                desde {nl.min_points?.toLocaleString()} pts
+                              </span>
+                            </div>
+
+                            {nl.perks && nl.perks.length > 0 && (
+                              <div className="space-y-2 mb-3">
+                                {nl.perks.map((perk: string, pi: number) => (
+                                  <div key={pi} className="flex items-center gap-2">
+                                    <Lock size={13} className="text-[#B1A9E5] flex-shrink-0" />
+                                    <span className="text-xs text-[#B1A9E5]">{perk}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+
+                            <p className="text-sm font-extrabold text-[#7546ED]">
+                              Te faltan {ptsNeeded.toLocaleString()} puntos
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
         {tab === 'Actividad' && (
           <div className="space-y-2">
             {transactions.length === 0 ? (
@@ -446,33 +609,210 @@ export default function CardDetailPage() {
 
         {tab === 'Canjear' && (
           <div className="space-y-3">
-            {rewards.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-[#B1A9E5] text-sm">Sin recompensas disponibles</p>
-                <p className="text-[#B1A9E5] text-xs mt-1">¡Vuelve más tarde por nuevas recompensas!</p>
-              </div>
-            ) : (
-              rewards.map((r: Reward) => (
-                <div
-                  key={r.id}
-                  className="bg-white rounded-2xl p-4 shadow-sm border border-[#B1A9E5]/10 flex items-center justify-between"
-                >
-                  <div>
-                    <p className="font-bold text-[#12173B] text-sm">{r.name}</p>
-                    <span className="inline-block bg-[#7546ED]/10 text-[#7546ED] text-xs font-bold px-2 py-0.5 rounded-full mt-1">
-                      {r.pointsCost} pts
-                    </span>
+            {(() => {
+              const loyaltyLevelsData = (business as Record<string, unknown> | null)?.loyalty_levels as Array<{
+                name: string; min_points: number; color: string; multiplier: number;
+                discount_percent: number; perks: string[];
+              }> | undefined;
+              const levelOrder: Record<string, number> = {};
+              const levelColors: Record<string, string> = {};
+              if (loyaltyLevelsData) {
+                loyaltyLevelsData.forEach((l, i) => {
+                  levelOrder[l.name] = i;
+                  levelColors[l.name] = l.color;
+                });
+              }
+              const currentLevelIndex = levelOrder[loyaltyCard.current_level] ?? -1;
+              const currentPoints = loyaltyCard.current_points || 0;
+              const now = Date.now();
+
+              if (rewards.length === 0) {
+                return (
+                  <div className="text-center py-8">
+                    <p className="text-[#B1A9E5] text-sm">Sin recompensas disponibles</p>
+                    <p className="text-[#B1A9E5] text-xs mt-1">¡Vuelve más tarde por nuevas recompensas!</p>
                   </div>
-                  <button
-                    onClick={() => setRedeemModal({ id: r.id, name: r.name, cost: r.pointsCost })}
-                    disabled={(loyaltyCard.current_points || 0) < r.pointsCost}
-                    className="px-4 py-2 rounded-btn bg-[#7546ED] text-white text-xs font-bold disabled:opacity-40 disabled:cursor-not-allowed"
+                );
+              }
+
+              // Compute state for each reward
+              const enriched = rewards.map((r: Reward) => {
+                const rewardMinLevelIndex = r.minLevel ? (levelOrder[r.minLevel] ?? 0) : -1;
+                const hasLevel = currentLevelIndex >= rewardMinLevelIndex;
+                const hasPoints = currentPoints >= r.pointsCost;
+                const isExpired = r.validUntil && new Date(r.validUntil).getTime() < now;
+                const isOutOfStock = r.isLimited && r.quantityAvailable !== null && r.quantityAvailable <= 0;
+                const isDisabled = isExpired || isOutOfStock;
+
+                let canRedeem = false;
+                if (rewardMinLevelIndex < 0 || hasLevel) {
+                  if (hasPoints && !isDisabled) {
+                    canRedeem = true;
+                  }
+                }
+                const isLockedByLevel = rewardMinLevelIndex >= 0 && !hasLevel;
+
+                let sortOrder = 0;
+                if (canRedeem) sortOrder = 0;
+                else if (!isDisabled && (rewardMinLevelIndex < 0 || hasLevel) && !hasPoints) sortOrder = 1;
+                else if (isLockedByLevel) sortOrder = 2;
+                else if (isOutOfStock) sortOrder = 3;
+                else if (isExpired) sortOrder = 4;
+
+                return { ...r, hasLevel, hasPoints, isExpired, isOutOfStock, isDisabled, canRedeem, isLockedByLevel, sortOrder };
+              });
+
+              enriched.sort((a, b) => a.sortOrder - b.sortOrder || a.pointsCost - b.pointsCost);
+
+              // Helpers for time display
+              const timeLeftText = (until: string | null): { text: string; urgent: boolean } | null => {
+                if (!until) return null;
+                const end = new Date(until).getTime();
+                const diffHours = Math.ceil((end - now) / (1000 * 60 * 60));
+                if (diffHours <= 0) return null;
+                if (diffHours <= 3) return { text: `Últimas ${diffHours}h`, urgent: true };
+                if (diffHours <= 24) return { text: `Quedan ${diffHours}h`, urgent: diffHours <= 8 };
+                const diffDays = Math.ceil(diffHours / 24);
+                if (diffDays <= 3) return { text: `Último día` + (diffDays > 1 ? `s (${diffDays})` : ''), urgent: true };
+                return { text: `Hasta ${new Date(until).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}`, urgent: false };
+              };
+
+              return enriched.map((r) => {
+                const rewardLevelColor = r.minLevel ? (levelColors[r.minLevel] || '#B1A9E5') : '#B1A9E5';
+                const levelBadge = r.minLevel && r.minLevel !== 'Bronze' ? r.minLevel : null;
+                const timeLeft = !r.isOutOfStock && !r.isExpired ? timeLeftText(r.validUntil) : null;
+
+                // Icon
+                const IconComponent = r.isLockedByLevel ? Lock
+                  : r.isExpired ? Clock
+                  : r.isOutOfStock ? Lock
+                  : levelBadge === 'Silver' ? Star
+                  : levelBadge === 'Gold' ? Crown
+                  : Gift;
+
+                const pointsNeeded = Math.max(0, r.pointsCost - currentPoints);
+
+                // Button config
+                let btnText = '';
+                let btnClass = '';
+                let btnDisabled = true;
+                if (r.canRedeem) {
+                  btnText = `Canjear por ${r.pointsCost} pts`;
+                  btnClass = 'bg-[#7546ED] text-white hover:bg-[#7546ED]/90';
+                  btnDisabled = false;
+                } else if (r.isExpired) {
+                  btnText = 'Expirado';
+                  btnClass = 'bg-[#B1A9E5]/10 text-[#B1A9E5] cursor-not-allowed';
+                } else if (r.isOutOfStock) {
+                  btnText = 'Agotado';
+                  btnClass = 'bg-[#B1A9E5]/10 text-[#B1A9E5] cursor-not-allowed';
+                } else if (r.isLockedByLevel) {
+                  btnText = `Nivel ${r.minLevel} requerido`;
+                  btnClass = 'bg-[#B1A9E5]/10 text-[#B1A9E5] cursor-not-allowed';
+                } else {
+                  btnText = `Te faltan ${pointsNeeded} pts`;
+                  btnClass = 'border border-[#B1A9E5]/40 text-[#B1A9E5]';
+                  btnDisabled = true;
+                }
+
+                return (
+                  <div
+                    key={r.id}
+                    className={`relative rounded-2xl shadow-sm overflow-hidden transition-all ${
+                      r.isDisabled || r.isLockedByLevel ? 'opacity-60' : ''
+                    } bg-white border border-[#B1A9E5]/10`}
                   >
-                    Canjear
-                  </button>
-                </div>
-              ))
-            )}
+                    {(r.isOutOfStock || r.isExpired) && (
+                      <div className="absolute inset-0 bg-white/60 flex items-center justify-center z-10">
+                        <span className="text-[#B1A9E5] font-extrabold text-lg uppercase tracking-wider opacity-80">
+                          {r.isOutOfStock ? 'Agotado' : 'Expirado'}
+                        </span>
+                      </div>
+                    )}
+
+                    <div className="p-4 flex gap-3">
+                      {/* Left column: icon + name + description + points */}
+                      <div className="flex-1 min-w-0 flex items-start gap-3">
+                        <div
+                          className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                            r.isLockedByLevel ? 'bg-[#B1A9E5]/10' : ''
+                          }`}
+                          style={!r.isLockedByLevel && levelBadge ? { background: `${rewardLevelColor}15` } : undefined}
+                        >
+                          <IconComponent
+                            size={20}
+                            style={{ color: r.isLockedByLevel ? '#B1A9E5' : rewardLevelColor }}
+                          />
+                        </div>
+
+                        <div className="min-w-0">
+                          <p className={`font-bold text-sm truncate ${r.isDisabled ? 'text-[#B1A9E5]' : 'text-[#12173B]'}`}>
+                            {r.name}
+                          </p>
+                          {r.description && (
+                            <p className={`text-xs mt-0.5 line-clamp-2 ${r.isDisabled ? 'text-[#B1A9E5]' : 'text-[#B1A9E5]'}`}>
+                              {r.description}
+                            </p>
+                          )}
+                          <span className={`inline-block text-xs font-bold px-2 py-0.5 rounded-full mt-1.5 ${
+                            r.isDisabled
+                              ? 'bg-[#B1A9E5]/10 text-[#B1A9E5] line-through'
+                              : 'bg-[#7546ED]/10 text-[#7546ED]'
+                          }`}>
+                            {r.pointsCost} pts
+                          </span>
+
+                          {/* Exclusive badge for unlocked */}
+                          {levelBadge && !r.isLockedByLevel && (
+                            <span
+                              className="ml-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full"
+                              style={{ background: `${rewardLevelColor}15`, color: rewardLevelColor }}
+                            >
+                              Exclusivo {levelBadge}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Right column: conditions + button */}
+                      <div className="flex flex-col items-end justify-between gap-2 flex-shrink-0 max-w-[130px]">
+                        <div className="flex flex-col items-end gap-1">
+                          {r.isLimited && r.quantityAvailable !== null && r.quantityAvailable > 0 && (
+                            <span
+                              className={`text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#FF6B6B]/10 text-[#FF6B6B] whitespace-nowrap ${
+                                r.quantityAvailable <= 3 ? 'animate-pulse' : ''
+                              }`}
+                            >
+                              Quedan {r.quantityAvailable}
+                            </span>
+                          )}
+                          {timeLeft && (
+                            <span className={`text-[10px] font-medium whitespace-nowrap flex items-center gap-1 ${timeLeft.urgent ? 'text-[#FF6B6B]' : 'text-[#F59E0B]'}`}>
+                              <Clock size={10} />
+                              {timeLeft.text}
+                            </span>
+                          )}
+                        </div>
+
+                        <button
+                          onClick={() => {
+                            if (r.canRedeem) {
+                              setRedeemModal({ id: r.id, name: r.name, cost: r.pointsCost, description: r.description });
+                            }
+                          }}
+                          disabled={btnDisabled}
+                          className={`px-3 py-2 rounded-btn text-xs font-bold transition-all whitespace-nowrap ${btnClass} ${
+                            btnDisabled ? 'disabled:opacity-100' : ''
+                          }`}
+                        >
+                          {btnText}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              });
+            })()}
           </div>
         )}
 
@@ -521,10 +861,27 @@ export default function CardDetailPage() {
       <Modal open={!!redeemModal} onClose={() => setRedeemModal(null)} title="Canjear Recompensa">
         {redeemModal && (
           <div>
-            <p className="text-[#12173B] font-semibold mb-1">{redeemModal.name}</p>
-            <p className="text-[#B1A9E5] text-sm mb-4">
-              Esto costará <span className="text-[#7546ED] font-bold">{redeemModal.cost} pts</span>.
-              Tu balance: <span className="text-[#12173B] font-bold">{(loyaltyCard.current_points || 0).toLocaleString()} pts</span>
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-12 h-12 rounded-xl bg-[#7546ED]/10 flex items-center justify-center flex-shrink-0">
+                <Gift size={22} className="text-[#7546ED]" />
+              </div>
+              <div>
+                <p className="text-[#12173B] font-extrabold text-base">{redeemModal.name}</p>
+                {redeemModal.description && (
+                  <p className="text-[#B1A9E5] text-xs mt-0.5">{redeemModal.description}</p>
+                )}
+              </div>
+            </div>
+            <p className="text-[#12173B] font-semibold text-sm mb-1">
+              ¿Canjear por{' '}
+              <span className="text-[#7546ED] font-extrabold">{redeemModal.cost} puntos</span>?
+            </p>
+            <p className="text-[#B1A9E5] text-xs mb-4">
+              Tendrás{' '}
+              <span className="text-[#12173B] font-bold">
+                {Math.max(0, (loyaltyCard.current_points || 0) - redeemModal.cost).toLocaleString()} pts
+              </span>{' '}
+              restantes después del canje
             </p>
             <div className="flex gap-3">
               <button

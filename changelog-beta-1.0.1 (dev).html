@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Zuma · Beta 1.0.1 — Notas de versión</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: #F4F3FB;
+      color: #12173B;
+      max-width: 780px;
+      margin: 0 auto;
+      padding: 40px 24px 80px;
+    }
+    .header {
+      background: linear-gradient(135deg, #12173B, #7546ED);
+      border-radius: 20px;
+      padding: 36px 32px;
+      margin-bottom: 32px;
+      color: white;
+    }
+    .header h1 { font-size: 28px; font-weight: 800; }
+    .header p { font-size: 14px; color: rgba(255,255,255,0.65); margin-top: 4px; }
+    .version-badge {
+      display: inline-block;
+      background: rgba(255,255,255,0.15);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 30px;
+      padding: 4px 14px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      margin-bottom: 12px;
+    }
+    .section {
+      background: white;
+      border-radius: 16px;
+      border: 1px solid rgba(177,169,229,0.15);
+      padding: 24px;
+      margin-bottom: 20px;
+      box-shadow: 0 1px 3px rgba(18,23,59,0.04);
+    }
+    .section h2 {
+      font-size: 18px;
+      font-weight: 800;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .section h3 {
+      font-size: 14px;
+      font-weight: 700;
+      margin: 16px 0 8px;
+      color: #7546ED;
+    }
+    .section h3:first-of-type { margin-top: 12px; }
+    ul { padding-left: 20px; }
+    li {
+      font-size: 13px;
+      color: #12173B;
+      line-height: 1.7;
+      margin-bottom: 2px;
+    }
+    li code {
+      background: #F4F3FB;
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-size: 12px;
+      color: #7546ED;
+    }
+    .tag {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 20px;
+      margin-right: 6px;
+      letter-spacing: 0.3px;
+    }
+    .tag-feature { background: #7546ED15; color: #7546ED; }
+    .tag-fix { background: #FF6B6B10; color: #FF6B6B; }
+    .tag-enhance { background: #10B98110; color: #10B981; }
+    .files-section { background: #12173B05; border: 1px solid rgba(177,169,229,0.1); border-radius: 12px; padding: 16px; margin-top: 12px; }
+    .files-section p { font-size: 11px; color: #B1A9E5; font-weight: 600; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .files-section code { display: block; font-size: 11px; color: #12173B; line-height: 1.8; background: none; padding: 0; }
+    .color-dot {
+      display: inline-block;
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      margin-right: 4px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <span class="version-badge">BETA 1.0.1</span>
+  <h1>Zuma — Notas de versión</h1>
+  <p>Sistema de niveles, beneficios, notificaciones y canje inteligente</p>
+</div>
+
+<!-- ========= SISTEMA DE NOTIFICACIONES ========= -->
+<div class="section">
+  <h2><span class="tag tag-feature">NUEVO</span> Sistema de Notificaciones</h2>
+
+  <h3>BottomNav del cliente</h3>
+  <ul>
+    <li>Agregada cuarta pestaña <strong>Notificaciones</strong> (ícono campana) entre Tarjetas y Perfil</li>
+    <li>Badge circular rojo (<code>#FF6B6B</code>) con conteo de no leídas en la esquina del ícono</li>
+    <li>Si hay 10+ no leídas: muestra <code>9+</code></li>
+    <li>El conteo se actualiza en tiempo real sin recargar la página</li>
+  </ul>
+
+  <h3>Página /notifications</h3>
+  <ul>
+    <li>Lista de notificaciones ordenadas por <code>created_at DESC</code>, límite 50</li>
+    <li>Íconos según tipo: <code>level_up</code> → estrella, <code>reward_unlocked</code> → regalo, <code>points_earned</code> → moneda, <code>promotion</code> → megáfono, <code>general</code> → campana</li>
+    <li>Timestamps relativos en español: "hace 2 horas", "ayer", "hace 3 días"</li>
+    <li>Punto circular morado a la izquierda para no leídas + fondo diferenciado</li>
+    <li>Al tocar una notificación se marca como leída y decrementa el badge</li>
+    <li>Botón "Marcar todas como leídas" (solo visible si hay no leídas)</li>
+    <li>Notificaciones <code>level_up</code> con gradiente del color del nivel, estrella dorada y perks con check verde</li>
+    <li>Estado vacío con campana grande gris: "No tienes notificaciones aún"</li>
+  </ul>
+
+  <h3>NotificationContext</h3>
+  <ul>
+    <li>Nuevo contexto <code>NotificationContext</code> para compartir el conteo entre BottomNav y NotificationsPage</li>
+    <li>Provee <code>notificationCount</code>, <code>refreshCount()</code>, <code>decrementCount()</code></li>
+  </ul>
+
+  <div class="files-section">
+    <p>Archivos</p>
+    <code>+ src/context/NotificationContext.tsx</code>
+    <code>+ src/pages/customer/NotificationsPage.tsx</code>
+    <code>~ src/components/BottomNav.tsx</code>
+    <code>~ src/App.tsx</code>
+  </div>
+</div>
+
+<!-- ========= VISUALIZACIÓN DE PUNTOS ========= -->
+<div class="section">
+  <h2><span class="tag tag-feature">NUEVO</span> Visualización de Puntos en Tarjetas</h2>
+
+  <ul>
+    <li>Todas las vistas que muestran tarjetas de fidelidad ahora exponen ambos valores de puntos:</li>
+    <li><strong>current_points</strong> → "pts disponibles" (se gastan al canjear)</li>
+    <li><strong>total_points_earned</strong> → "pts acumulados" (determinan el nivel, nunca bajan)</li>
+  </ul>
+
+  <h3>HomePage — Mini cards</h3>
+  <ul>
+    <li><code>LoyaltyCard</code> compact muestra <code>current_points</code> grande + <code>total_points_earned</code> chico debajo</li>
+    <li>Nuevos props: <code>currentPoints</code>, <code>totalPointsEarned</code>, <code>levelColor</code></li>
+  </ul>
+
+  <h3>CardsPage — Lista de tarjetas</h3>
+  <ul>
+    <li>"X disponibles" en grande + "Y pts acumulados" debajo</li>
+  </ul>
+
+  <h3>CardDetailPage — Header</h3>
+  <ul>
+    <li>Muestra "pts disponibles" grande + "pts acumulados" en texto secundario</li>
+    <li>LevelProgressBar ahora usa <code>total_points_earned</code> (no <code>current_points</code>)</li>
+    <li>Gradiente de la barra entre colores del nivel actual y siguiente</li>
+  </ul>
+
+  <h3>LevelProgressBar</h3>
+  <ul>
+    <li>Reescrito para aceptar estructura <code>{ name, min_points, color }</code> desde <code>businesses.loyalty_levels</code> (JSONB)</li>
+    <li>Eliminada dependencia de tipos <code>mockData.ts</code></li>
+  </ul>
+
+  <div class="files-section">
+    <p>Archivos</p>
+    <code>~ src/components/LoyaltyCard.tsx</code>
+    <code>~ src/components/LevelProgressBar.tsx</code>
+    <code>~ src/pages/customer/HomePage.tsx</code>
+    <code>~ src/pages/customer/CardsPage.tsx</code>
+    <code>~ src/pages/customer/CardDetailPage.tsx</code>
+  </div>
+</div>
+
+<!-- ========= PANEL NEGOCIO: NIVELES ========= -->
+<div class="section">
+  <h2><span class="tag tag-feature">NUEVO</span> Panel Negocio — Programa de Niveles</h2>
+
+  <h3>Navegación</h3>
+  <ul>
+    <li>Nuevo ítem "Niveles" (ícono escudo) en BusinessSidebar y BusinessBottomNav, después de Recompensas</li>
+    <li>Ruta: <code>/business/levels</code></li>
+  </ul>
+
+  <h3>LevelsPage</h3>
+  <ul>
+    <li>Lee <code>businesses.loyalty_levels</code> (JSONB). Si es null/vacío, usa defaults Bronze/Silver/Gold</li>
+    <li>3 cards editables (Bronze, Silver, Gold):</li>
+    <li>Nombre con dot de color • Puntos requeridos (Bronze deshabilitado en 0) • Multiplicador (1.0–5.0, step 0.5) • Descuento permanente % (slider 0–50) • Perks editables con botón X para eliminar</li>
+    <li>Botón "+ Agregar beneficio" (máximo 6 por nivel)</li>
+    <li>"Guardar cambios" → <code>UPDATE businesses SET loyalty_levels = [...]</code></li>
+    <li>Sección "Distribución de clientes": query agrupado por <code>current_level</code>, 3 mini cards con color del nivel</li>
+  </ul>
+
+  <div class="files-section">
+    <p>Archivos</p>
+    <code>+ src/pages/business/LevelsPage.tsx</code>
+    <code>~ src/components/BusinessSidebar.tsx</code>
+    <code>~ src/components/BusinessBottomNav.tsx</code>
+    <code>~ src/App.tsx</code>
+  </div>
+</div>
+
+<!-- ========= TAB DETALLES ========= -->
+<div class="section">
+  <h2><span class="tag tag-feature">NUEVO</span> Tab "Detalles" en CardDetailPage</h2>
+
+  <h3>Navegación</h3>
+  <ul>
+    <li>Tabs reorganizados: <strong>Detalles | Actividad | Canjear | Info</strong></li>
+    <li>"Detalles" es el tab por defecto al entrar</li>
+  </ul>
+
+  <h3>Contenido</h3>
+  <ul>
+    <li><strong>Tus beneficios</strong> — título como encabezado de sección (fuera de la card)</li>
+    <li>Cards destacadas para multiplicador > 1 (<span class="color-dot" style="background:#F59E0B"></span> rayo) y descuento > 0 (<span class="color-dot" style="background:#7546ED"></span> porcentaje) con fondo sutil del color del nivel</li>
+    <li>Cada perk en su propia card individual con gradiente sutil, <code>border-left: 3px</code> del color, check verde <code>#10B981</code></li>
+    <li><strong>Próximos niveles</strong> — sección con efecto "bloqueado" (<code>opacity-85</code>), borde grueso del color, perks con candado gris</li>
+    <li>Franja superior con gradiente sutil del color del nivel</li>
+  </ul>
+
+  <div class="files-section">
+    <p>Archivos</p>
+    <code>~ src/pages/customer/CardDetailPage.tsx</code>
+  </div>
+</div>
+
+<!-- ========= CANJE CON MIN_LEVEL ========= -->
+<div class="section">
+  <h2><span class="tag tag-feature">NUEVO</span> Lógica de Canje con min_level</h2>
+
+  <h3>Tab Canjear rediseñado</h3>
+  <ul>
+    <li>Layout de 2 columnas: izquierda (ícono + nombre + descripción truncada + badge puntos) | derecha (condiciones + botón)</li>
+    <li>Orden automático: canjeables → sin puntos → nivel insuficiente → agotados/expirados al final</li>
+    <li>Máx 2 badges por card</li>
+  </ul>
+
+  <h3>Diseño de cada reward card</h3>
+  <ul>
+    <li><strong>Normal:</strong> ícono Gift, nombre bold, descripción line-clamp-2, badge de puntos</li>
+    <li><strong>Exclusivo (Silver/Gold):</strong> ícono Star/Crown, ribbon "Exclusivo [Nivel]" con color del nivel</li>
+    <li><strong>Nivel insuficiente:</strong> ícono Lock, card opacity-60, botón gris "Nivel Silver requerido"</li>
+    <li><strong>Limitado:</strong> badge rojo "Quedan X", pulse si ≤ 3, overlay "Agotado" si stock = 0</li>
+    <li><strong>Temporal:</strong> ícono reloj, "Últimas Xh" en rojo si &lt; 3 días, overlay "Expirado" si venció</li>
+  </ul>
+
+  <h3>Estados del botón</h3>
+  <ul>
+    <li>Canjeable: "Canjear por X pts" filled <code>#7546ED</code></li>
+    <li>Sin puntos: "Te faltan X pts" outline <code>#B1A9E5</code></li>
+    <li>Nivel insuficiente: "Nivel [X] requerido" gris</li>
+    <li>Agotado / Expirado: botón gris con texto correspondiente</li>
+  </ul>
+
+  <h3>Modal de confirmación mejorado</h3>
+  <ul>
+    <li>Ícono Gift + nombre + descripción + "¿Canjear por X puntos?" + "Tendrás Y pts restantes"</li>
+    <li>handleRedeem verifica nivel antes de puntos</li>
+    <li>Solo descuenta <code>current_points</code> — nunca toca <code>total_points_earned</code></li>
+  </ul>
+
+  <h3>Panel Negocio — min_level en rewards</h3>
+  <ul>
+    <li>Selector toggle horizontal tipo segmented control: [Bronze] [Silver] [Gold]</li>
+    <li>Cada opción con color del nivel al seleccionarse. Bronze por defecto = sin restricción (null en DB)</li>
+    <li>Badges visuales en las cards del panel: "Exclusivo Silver/Gold", "Quedan X", rango de fechas</li>
+  </ul>
+
+  <div class="files-section">
+    <p>Archivos</p>
+    <code>~ src/pages/customer/CardDetailPage.tsx</code>
+    <code>~ src/pages/business/RewardsPage.tsx</code>
+  </div>
+</div>
+
+<!-- ========= MEJORAS PANEL NEGOCIO ========= -->
+<div class="section">
+  <h2><span class="tag tag-enhance">MEJORA</span> Panel Negocio — Búsqueda y categorías</h2>
+
+  <h3>ProductsPage</h3>
+  <ul>
+    <li>Barra de búsqueda con ícono Search — filtra por nombre y categoría en tiempo real</li>
+    <li>Choice chips de sugerencias debajo del input de categoría en el modal crear/editar</li>
+    <li>Muestra categorías existentes que coinciden con lo escrito; al tocar una se rellena el campo</li>
+  </ul>
+
+  <h3>RewardsPage</h3>
+  <ul>
+    <li>Barra de búsqueda con ícono Search — filtra por nombre y descripción</li>
+    <li>Category chips horizontales para filtrar (mismo estilo que ProductsPage)</li>
+    <li>Choice chips de sugerencias de categoría en el modal crear/editar</li>
+  </ul>
+
+  <div class="files-section">
+    <p>Archivos</p>
+    <code>~ src/pages/business/ProductsPage.tsx</code>
+    <code>~ src/pages/business/RewardsPage.tsx</code>
+  </div>
+</div>
+
+<!-- ========= CORRECCIONES ========= -->
+<div class="section">
+  <h2><span class="tag tag-fix">CORRECCIÓN</span> Errores solucionados</h2>
+
+  <h3>HomePage</h3>
+  <ul>
+    <li>"Puntos canjeados" ya no muestra el signo negativo redundante</li>
+    <li>Todas las queries (compras recientes, canjes recientes, estadísticas) migradas a patrón manual-join en lugar de <code>loyalty_cards!inner</code> con filtro embebido (no confiable)</li>
+    <li>Compras recientes: ahora muestra descripción del producto y nombre real del negocio</li>
+    <li>Canjes recientes: ahora muestra nombre del reward y negocio donde se canjeó</li>
+    <li>"Expirado" cambiado a "Cancelado"; cancelados muestran <code>+</code> puntos (devueltos) en verde</li>
+  </ul>
+
+  <div class="files-section">
+    <p>Archivos</p>
+    <code>~ src/pages/customer/HomePage.tsx</code>
+  </div>
+</div>
+
+<!-- ========= RESUMEN DE ARCHIVOS ========= -->
+<div class="section">
+  <h2>Resumen de archivos</h2>
+
+  <h3>Archivos nuevos</h3>
+  <ul>
+    <li><code>src/context/NotificationContext.tsx</code></li>
+    <li><code>src/pages/customer/NotificationsPage.tsx</code></li>
+    <li><code>src/pages/business/LevelsPage.tsx</code></li>
+  </ul>
+
+  <h3>Archivos modificados</h3>
+  <ul>
+    <li><code>src/App.tsx</code></li>
+    <li><code>src/components/BottomNav.tsx</code></li>
+    <li><code>src/components/BusinessSidebar.tsx</code></li>
+    <li><code>src/components/BusinessBottomNav.tsx</code></li>
+    <li><code>src/components/LoyaltyCard.tsx</code></li>
+    <li><code>src/components/LevelProgressBar.tsx</code></li>
+    <li><code>src/pages/customer/HomePage.tsx</code></li>
+    <li><code>src/pages/customer/CardsPage.tsx</code></li>
+    <li><code>src/pages/customer/CardDetailPage.tsx</code></li>
+    <li><code>src/pages/business/RewardsPage.tsx</code></li>
+    <li><code>src/pages/business/ProductsPage.tsx</code></li>
+  </ul>
+</div>
+
+<div style="text-align: center; color: #B1A9E5; font-size: 12px; margin-top: 24px;">
+  Zuma Beta 1.0.1 · Mayo 2026
+</div>
+
+</body>
+</html>

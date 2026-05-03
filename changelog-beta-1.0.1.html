@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Beta 1.0.1 Notes Releases — Zuma</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: #F4F3FB;
+      color: #12173B;
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 40px 24px 80px;
+      line-height: 1.6;
+    }
+
+    .hero {
+      background: linear-gradient(135deg, #12173B, #7546ED);
+      border-radius: 24px;
+      padding: 44px 32px;
+      margin-bottom: 36px;
+      color: white;
+      text-align: center;
+    }
+    .hero h1 {
+      font-size: 30px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+    .hero .subtitle {
+      font-size: 15px;
+      color: rgba(255,255,255,0.6);
+      margin-top: 6px;
+    }
+    .hero .tag {
+      display: inline-block;
+      background: rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.18);
+      border-radius: 30px;
+      padding: 5px 18px;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.8px;
+      margin-bottom: 16px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 18px;
+      border: 1px solid rgba(177,169,229,0.12);
+      padding: 28px 28px 24px;
+      margin-bottom: 22px;
+      box-shadow: 0 2px 8px rgba(18,23,59,0.03);
+    }
+    .card h2 {
+      font-size: 19px;
+      font-weight: 800;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .card p {
+      font-size: 14px;
+      color: #3A3F5A;
+      margin-bottom: 12px;
+    }
+    .card ul {
+      padding-left: 20px;
+      margin-bottom: 4px;
+    }
+    .card li {
+      font-size: 13.5px;
+      color: #12173B;
+      margin-bottom: 6px;
+      line-height: 1.6;
+    }
+    .card li strong { color: #7546ED; }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 13px;
+      font-weight: 700;
+      margin-right: 16px;
+      margin-bottom: 4px;
+    }
+    .chip-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .highlight {
+      background: linear-gradient(135deg, #7546ED08, #DC89FF08);
+      border-left: 3px solid #7546ED;
+      padding: 14px 18px;
+      border-radius: 0 12px 12px 0;
+      margin: 16px 0;
+      font-size: 13px;
+      color: #3A3F5A;
+    }
+
+    .footer {
+      text-align: center;
+      color: #B1A9E5;
+      font-size: 12px;
+      margin-top: 30px;
+      padding-top: 20px;
+      border-top: 1px solid rgba(177,169,229,0.15);
+    }
+  </style>
+</head>
+<body>
+
+<div class="hero">
+  <span class="tag">BETA 1.0.1</span>
+  <h1>Zuma — Novedades</h1>
+  <p class="subtitle">Tu programa de lealtad, ahora más inteligente</p>
+</div>
+
+<div class="card">
+  <h2>🔔 Notificaciones</h2>
+  <p>Ahora recibirás notificaciones dentro de la app cuando ocurra algo importante en tu programa de lealtad.</p>
+  <ul>
+    <li><strong>Cuando subas de nivel</strong> — verás una notificación especial con el color de tu nuevo nivel y todos los beneficios que acabas de desbloquear.</li>
+    <li><strong>Cuando ganes puntos</strong> — cada compra te avisará cuántos puntos sumaste.</li>
+    <li><strong>Cuando desbloquees una recompensa</strong> — sabrás al instante si ya puedes canjear algo nuevo.</li>
+    <li><strong>Promociones y avisos</strong> — los negocios podrán enviarte novedades directamente.</li>
+  </ul>
+  <p>Las notificaciones no leídas aparecerán con un <strong>puntito morado</strong> y verás un <strong>contador rojo</strong> en el ícono de la campana. Puedes marcar una como leída con un toque, o marcar todas de una vez.</p>
+</div>
+
+<div class="card">
+  <h2>⭐ Niveles y beneficios</h2>
+  <p>Cada tarjeta de fidelidad ahora tiene un <strong>programa de niveles</strong> (Bronze, Silver, Gold) con beneficios reales que se aplican automáticamente.</p>
+  <ul>
+    <li><strong>Multiplicador de puntos</strong> — si eres Silver o Gold, cada compra te da más puntos. Por ejemplo, con Gold ganas el doble de puntos por cada compra.</li>
+    <li><strong>Descuento permanente</strong> — tu nivel puede darte un descuento fijo en todas tus compras en ese negocio.</li>
+    <li><strong>Beneficios exclusivos</strong> — cada nivel incluye ventajas que puedes ver entrando a tu tarjeta y tocando la pestaña <strong>Detalles</strong>.</li>
+  </ul>
+  <p>Además, puedes ver qué beneficios tendrás en el <strong>siguiente nivel</strong> y cuántos puntos te faltan para alcanzarlo.</p>
+</div>
+
+<div class="card">
+  <h2>💳 Tus puntos, más claros</h2>
+  <p>Ahora en todas partes verás dos tipos de puntos:</p>
+  <ul>
+    <li><strong>Puntos disponibles</strong> — los que puedes gastar canjeando recompensas.</li>
+    <li><strong>Puntos acumulados</strong> — tu historial total, que determina tu nivel y <em>nunca baja</em>.</li>
+  </ul>
+  <p>Los encuentras en la pantalla de inicio, en tu lista de tarjetas y dentro de cada tarjeta. La barra de progreso hacia el siguiente nivel se basa en tus <strong>puntos acumulados</strong>, no en los disponibles.</p>
+</div>
+
+<div class="card">
+  <h2>🎁 Recompensas más inteligentes</h2>
+  <p>La sección de canje ahora es más clara y te muestra exactamente qué puedes canjear y qué necesitas.</p>
+  <ul>
+    <li><strong>Recompensas exclusivas por nivel</strong> — algunas recompensas requieren ser Silver o Gold. Si no tienes el nivel, verás un candado y el botón te dirá qué nivel necesitas.</li>
+    <li><strong>Recompensas por tiempo limitado</strong> — si una recompensa vence pronto, verás un reloj y un aviso como "Últimas 3h" en rojo.</li>
+    <li><strong>Stock limitado</strong> — si quedan pocas unidades, aparece un badge rojo con "Quedan 3" que parpadea para que no se te pase.</li>
+    <li><strong>Recompensas agotadas o vencidas</strong> — se muestran al final de la lista para que sepas qué había disponible.</li>
+  </ul>
+  <p>Al tocar "Canjear" verás una confirmación con el costo en puntos y cuántos te quedarán después del canje.</p>
+</div>
+
+<div class="card">
+  <h2>🏪 Para dueños de negocio</h2>
+  <p>Si tienes un negocio en Zuma, esta actualización te da nuevas herramientas:</p>
+  <ul>
+    <li><strong>Programa de niveles personalizable</strong> — puedes definir cuántos puntos se necesitan para cada nivel, el multiplicador de puntos, el descuento y los beneficios que reciben tus clientes. Todo desde la nueva sección <strong>Niveles</strong>.</li>
+    <li><strong>Recompensas con nivel mínimo</strong> — ahora puedes crear recompensas que solo estén disponibles para clientes Silver o Gold, haciendo tu programa más atractivo.</li>
+    <li><strong>Buscador en productos y recompensas</strong> — encuentra rápido lo que necesitas con la nueva barra de búsqueda.</li>
+    <li><strong>Filtro por categorías</strong> — organiza y filtra tus productos y recompensas por categoría.</li>
+  </ul>
+</div>
+
+<div class="highlight">
+  <strong>💡 ¿Sabías que…?</strong><br>
+  Tus puntos acumulados nunca bajan al canjear. Solo se descuentan de tus puntos disponibles. Así que tu nivel está seguro aunque canjees muchas recompensas.
+</div>
+
+<div class="footer">
+  Zuma · Beta 1.0.1 · Mayo 2026<br>
+  Hecho para negocios y clientes que valoran la lealtad.
+</div>
+
+</body>
+</html>

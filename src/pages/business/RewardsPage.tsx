@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, CheckCircle, XCircle, Edit2, Clock, Calendar, AlertCircle, RefreshCw } from 'lucide-react';
+import { Plus, CheckCircle, XCircle, Edit2, AlertCircle, RefreshCw, Search } from 'lucide-react';
 import Modal from '../../components/Modal';
 import SkeletonLoader from '../../components/SkeletonLoader';
 import { useApp } from '../../context/AppContext';
@@ -18,6 +18,7 @@ interface Reward {
   quantity_available: number | null;
   valid_from: string | null;
   valid_until: string | null;
+  min_level: string | null;
   created_at: string;
 }
 
@@ -43,6 +44,8 @@ export default function RewardsPage() {
   // Rewards state
   const [rewards, setRewards] = useState<Reward[]>([]);
   const [loadingRewards, setLoadingRewards] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeCategory, setActiveCategory] = useState('Todos');
   
   // Redemptions state
   const [redemptions, setRedemptions] = useState<Redemption[]>([]);
@@ -60,6 +63,7 @@ export default function RewardsPage() {
   const [hasTimeLimit, setHasTimeLimit] = useState(false);
   const [validFrom, setValidFrom] = useState('');
   const [validUntil, setValidUntil] = useState('');
+  const [minLevel, setMinLevel] = useState('Bronze');
   const [isSaving, setIsSaving] = useState(false);
 
   // Load rewards from Supabase
@@ -169,6 +173,13 @@ export default function RewardsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const rewardCategories = ['Todos', ...Array.from(new Set(rewards.map(r => r.category).filter((c): c is string => !!c)))];
+  const filteredRewards = rewards.filter(r => {
+    const matchesCategory = activeCategory === 'Todos' || r.category === activeCategory;
+    const matchesSearch = !searchQuery || r.name.toLowerCase().includes(searchQuery.toLowerCase()) || (r.description || '').toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesCategory && matchesSearch;
+  });
+
   // Check if reward is currently valid (within time window)
   function isRewardCurrentlyValid(reward: Reward): boolean {
     const now = new Date();
@@ -184,36 +195,11 @@ export default function RewardsPage() {
     return true;
   }
 
-  // Get reward status text
-  function getRewardStatus(reward: Reward): { text: string; color: string } {
-    if (!reward.is_available) {
-      return { text: 'Disabled', color: 'text-[#B1A9E5]' };
-    }
-    
-    if (!isRewardCurrentlyValid(reward)) {
-      if (reward.valid_from && new Date(reward.valid_from) > new Date()) {
-        return { text: `Starts ${new Date(reward.valid_from).toLocaleDateString()}`, color: 'text-[#F59E0B]' };
-      }
-      return { text: 'Expired', color: 'text-[#FF6B6B]' };
-    }
-    
-    if (reward.is_limited && reward.quantity_available !== null && reward.quantity_available <= 0) {
-      return { text: 'Out of Stock', color: 'text-[#FF6B6B]' };
-    }
-    
-    if (reward.is_limited && reward.quantity_available !== null) {
-      return { text: `${reward.quantity_available} left`, color: 'text-[#10B981]' };
-    }
-    
-    if (reward.valid_until) {
-      const hoursLeft = Math.ceil((new Date(reward.valid_until).getTime() - Date.now()) / (1000 * 60 * 60));
-      if (hoursLeft <= 24) {
-        return { text: `Ends in ${hoursLeft}h`, color: 'text-[#F59E0B]' };
-      }
-      return { text: 'Active', color: 'text-[#10B981]' };
-    }
-    
-    return { text: 'Active', color: 'text-[#10B981]' };
+  // Get level color for badge display
+  function levelColorForName(name: string): string {
+    const loyaltyLevels = (business as unknown as Record<string, unknown> | null)?.loyalty_levels as Array<{ name: string; color: string }> | undefined;
+    const found = loyaltyLevels?.find((l: { name: string; color: string }) => l.name === name);
+    return found?.color || '#B1A9E5';
   }
 
   // Toggle reward availability
@@ -251,6 +237,7 @@ export default function RewardsPage() {
     setHasTimeLimit(false);
     setValidFrom('');
     setValidUntil('');
+    setMinLevel('Bronze');
     setModalOpen(true);
   }
 
@@ -266,6 +253,7 @@ export default function RewardsPage() {
     setHasTimeLimit(!!(reward.valid_from || reward.valid_until));
     setValidFrom(reward.valid_from ? new Date(reward.valid_from).toISOString().slice(0, 16) : '');
     setValidUntil(reward.valid_until ? new Date(reward.valid_until).toISOString().slice(0, 16) : '');
+    setMinLevel(reward.min_level || 'Bronze');
     setModalOpen(true);
   }
 
@@ -293,6 +281,7 @@ export default function RewardsPage() {
       quantity_available: isLimited ? (parseInt(quantityAvailable) || 0) : null,
       valid_from: hasTimeLimit && validFrom ? new Date(validFrom).toISOString() : null,
       valid_until: hasTimeLimit && validUntil ? new Date(validUntil).toISOString() : null,
+      min_level: minLevel === 'Bronze' ? null : minLevel,
     };
 
     try {
@@ -416,7 +405,7 @@ export default function RewardsPage() {
 
   return (
     <div className="flex-1 p-5 pb-24 md:pb-8 overflow-y-auto">
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-3">
         <h1 className="font-extrabold text-[#12173B] text-xl">Recompensas</h1>
         <div className="flex gap-2">
           <button
@@ -436,63 +425,94 @@ export default function RewardsPage() {
         </div>
       </div>
 
+      {/* Search bar */}
+      <div className="relative mb-3">
+        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#B1A9E5]" />
+        <input
+          value={searchQuery}
+          onChange={e => setSearchQuery(e.target.value)}
+          placeholder="Buscar recompensas..."
+          className="w-full pl-9 pr-3 py-2 rounded-inp border border-[#B1A9E5]/30 text-sm text-[#12173B] outline-none focus:border-[#7546ED] transition-all bg-white"
+        />
+      </div>
+
+      {/* Category chips */}
+      {rewardCategories.length > 1 && (
+        <div className="flex gap-2 mb-4 overflow-x-auto scrollbar-hide">
+          {rewardCategories.map(cat => (
+            <button
+              key={cat}
+              onClick={() => setActiveCategory(cat)}
+              className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all duration-200 ${
+                activeCategory === cat
+                  ? 'bg-[#7546ED] border-[#7546ED] text-white'
+                  : 'bg-white border-[#B1A9E5]/40 text-[#B1A9E5]'
+              }`}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Rewards list */}
       {loadingRewards ? (
         <SkeletonLoader rows={3} className="mb-8" />
-      ) : rewards.length === 0 ? (
+      ) : filteredRewards.length === 0 ? (
         <div className="text-center py-8 mb-8 bg-white rounded-2xl border border-[#B1A9E5]/10">
           <AlertCircle size={48} className="text-[#B1A9E5] mx-auto mb-3" />
-          <p className="text-[#B1A9E5] text-sm">Sin recompensas aún</p>
-          <p className="text-[#B1A9E5] text-xs mt-1">Crea tu primera recompensa para comenzar</p>
+          <p className="text-[#B1A9E5] text-sm">
+            {rewards.length === 0 ? 'Sin recompensas aún' : 'Sin resultados'}
+          </p>
+          <p className="text-[#B1A9E5] text-xs mt-1">
+            {rewards.length === 0 ? 'Crea tu primera recompensa para comenzar' : 'Prueba con otra búsqueda o categoría'}
+          </p>
         </div>
       ) : (
         <div className="space-y-3 mb-8">
-          {rewards.map(reward => {
-            const status = getRewardStatus(reward);
+          {filteredRewards.map(reward => {
             const isValid = isRewardCurrentlyValid(reward);
             
             return (
               <div key={reward.id} className={`bg-white rounded-2xl p-4 shadow-sm border transition-all ${
                 !reward.is_available || !isValid ? 'border-[#B1A9E5]/30 opacity-75' : 'border-[#B1A9E5]/10'
               }`}>
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <p className="font-bold text-[#12173B] text-sm">{reward.name}</p>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${status.color} bg-current/10`}>
-                        {status.text}
-                      </span>
-                    </div>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-[#12173B] text-sm truncate">{reward.name}</p>
                     {reward.description && (
-                      <p className="text-[#B1A9E5] text-xs mt-1">{reward.description}</p>
+                      <p className="text-[#B1A9E5] text-xs mt-1 line-clamp-2">{reward.description}</p>
                     )}
-                    <div className="flex items-center gap-3 mt-2">
+                    <div className="flex items-center gap-2 mt-2 flex-wrap">
                       <span className="inline-block bg-[#7546ED]/10 text-[#7546ED] text-xs font-bold px-2 py-0.5 rounded-full">
                         {reward.points_cost} pts
                       </span>
                       {reward.category && (
                         <span className="text-[#B1A9E5] text-xs">{reward.category}</span>
                       )}
+                      {reward.min_level && reward.min_level !== 'Bronze' && (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: `${levelColorForName(reward.min_level)}15`, color: levelColorForName(reward.min_level) }}>
+                          Exclusivo {reward.min_level}
+                        </span>
+                      )}
                       {reward.is_limited && (
-                        <span className="flex items-center gap-1 text-[#F59E0B] text-xs">
-                          <Clock size={12} />
-                          Limited
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#FF6B6B]/10 text-[#FF6B6B]">
+                          {reward.quantity_available !== null ? `Quedan ${reward.quantity_available}` : 'Limitado'}
                         </span>
                       )}
                       {(reward.valid_from || reward.valid_until) && (
-                        <span className="flex items-center gap-1 text-[#7546ED] text-xs">
-                          <Calendar size={12} />
-                          {reward.valid_from && reward.valid_until 
-                            ? `${new Date(reward.valid_from).toLocaleDateString()} - ${new Date(reward.valid_until).toLocaleDateString()}`
-                            : reward.valid_until 
-                              ? `Until ${new Date(reward.valid_until).toLocaleDateString()}`
-                              : `From ${new Date(reward.valid_from!).toLocaleDateString()}`
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#7546ED]/10 text-[#7546ED]">
+                          {reward.valid_from && reward.valid_until
+                            ? `${new Date(reward.valid_from).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })} - ${new Date(reward.valid_until).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}`
+                            : reward.valid_until
+                              ? `Hasta ${new Date(reward.valid_until).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}`
+                              : `Desde ${new Date(reward.valid_from!).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}`
                           }
                         </span>
                       )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-shrink-0">
                     <button
                       onClick={() => openEditModal(reward)}
                       className="p-2 rounded-btn bg-[#B1A9E5]/10 text-[#7546ED] hover:bg-[#7546ED]/20 transition-colors"
@@ -604,6 +624,52 @@ export default function RewardsPage() {
                 placeholder="ej. Bebida, Comida"
                 className="w-full px-3 py-2.5 rounded-inp border border-[#B1A9E5]/30 text-sm text-[#12173B] outline-none focus:border-[#7546ED] transition-all" 
               />
+              {rewardCategories.length > 1 && (
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {rewardCategories
+                    .filter(c => c !== 'Todos' && c.toLowerCase().includes(category.toLowerCase()) && c.toLowerCase() !== category.toLowerCase())
+                    .slice(0, 5)
+                    .map(cat => (
+                      <button
+                        key={cat}
+                        type="button"
+                        onClick={() => setCategory(cat)}
+                        className="px-2.5 py-1 rounded-full text-[10px] font-semibold bg-[#F4F3FB] text-[#7546ED] border border-[#7546ED]/15 hover:bg-[#7546ED]/10 transition-colors"
+                      >
+                        {cat}
+                      </button>
+                    ))
+                  }
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <label className="text-xs font-semibold text-[#B1A9E5] mb-2 block">Nivel mínimo requerido</label>
+            <div className="flex rounded-full border border-[#B1A9E5]/20 overflow-hidden">
+              {[
+                { value: 'Bronze', label: 'Bronze', color: '#CD7F32' },
+                { value: 'Silver', label: 'Silver', color: '#C0C0C0' },
+                { value: 'Gold', label: 'Gold', color: '#FFD700' },
+              ].map((opt) => {
+                const isSelected = minLevel === opt.value;
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setMinLevel(opt.value)}
+                    className={`flex-1 py-2 text-xs font-bold transition-all ${
+                      isSelected
+                        ? 'text-white'
+                        : 'bg-white text-[#B1A9E5] hover:bg-[#F4F3FB]'
+                    }`}
+                    style={isSelected ? { background: opt.color } : undefined}
+                  >
+                    {opt.label}
+                  </button>
+                );
+              })}
             </div>
           </div>
 

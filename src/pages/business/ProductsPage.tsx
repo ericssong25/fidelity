@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Edit2, AlertCircle, RefreshCw } from 'lucide-react';
+import { Plus, Edit2, AlertCircle, RefreshCw, Search } from 'lucide-react';
 import Modal from '../../components/Modal';
 import { useApp } from '../../context/AppContext';
 import { useBusinessData } from '../../context/BusinessDataContext';
@@ -31,6 +31,7 @@ export default function ProductsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState('Todos');
+  const [searchQuery, setSearchQuery] = useState('');
   const [modal, setModal] = useState(false);
   const [editName, setEditName] = useState('');
   const [editPrice, setEditPrice] = useState('');
@@ -81,9 +82,13 @@ export default function ProductsPage() {
   // Get unique categories from products
   const categories = ['Todos', ...Array.from(new Set(products.map(p => p.category).filter(Boolean)))];
 
-  const filtered = products.filter(p =>
-    activeCategory === 'Todos' || p.category === activeCategory
-  );
+  const filtered = products.filter(p => {
+    const matchesCategory = activeCategory === 'Todos' || p.category === activeCategory;
+    const matchesSearch = !searchQuery || p.name.toLowerCase().includes(searchQuery.toLowerCase()) || p.category.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesCategory && matchesSearch;
+  });
+
+  const existingCategories = Array.from(new Set(products.map(p => p.category).filter(Boolean)));
 
   function openAdd() {
     setEditingId(null);
@@ -239,7 +244,7 @@ export default function ProductsPage() {
 
   return (
     <div className="flex-1 p-5 pb-24 md:pb-8 overflow-y-auto">
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-3">
         <h1 className="font-extrabold text-[#12173B] text-xl">Productos</h1>
         <button
           onClick={openAdd}
@@ -248,6 +253,17 @@ export default function ProductsPage() {
           <Plus size={14} />
           Agregar
         </button>
+      </div>
+
+      {/* Search bar */}
+      <div className="relative mb-3">
+        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#B1A9E5]" />
+        <input
+          value={searchQuery}
+          onChange={e => setSearchQuery(e.target.value)}
+          placeholder="Buscar productos..."
+          className="w-full pl-9 pr-3 py-2 rounded-inp border border-[#B1A9E5]/30 text-sm text-[#12173B] outline-none focus:border-[#7546ED] transition-all bg-white"
+        />
       </div>
 
       {/* Category chips */}
@@ -347,6 +363,20 @@ export default function ProductsPage() {
             <label className="text-xs font-semibold text-[#B1A9E5] mb-1 block">Category</label>
             <input value={editCategory} onChange={e => setEditCategory(e.target.value)} placeholder="Category"
               className="w-full px-3 py-2.5 rounded-inp border border-[#B1A9E5]/30 text-sm text-[#12173B] outline-none focus:border-[#7546ED] transition-all" />
+            {existingCategories.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {existingCategories.filter(c => c.toLowerCase().includes(editCategory.toLowerCase()) && c !== editCategory).slice(0, 5).map(cat => (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => setEditCategory(cat)}
+                    className="px-2.5 py-1 rounded-full text-[10px] font-semibold bg-[#F4F3FB] text-[#7546ED] border border-[#7546ED]/15 hover:bg-[#7546ED]/10 transition-colors"
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
           <div className="flex items-center justify-between">
             <span className="text-sm font-semibold text-[#12173B]">Available</span>

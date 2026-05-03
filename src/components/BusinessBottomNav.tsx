@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Users, Package, Tag, Gift, Settings } from 'lucide-react';
+import { LayoutDashboard, Users, Package, Tag, Gift, Shield, Settings } from 'lucide-react';
 
 const items = [
   { to: '/business/overview', icon: LayoutDashboard, label: 'Overview' },
@@ -7,6 +7,7 @@ const items = [
   { to: '/business/products', icon: Package, label: 'Products' },
   { to: '/business/promotions', icon: Tag, label: 'Promos' },
   { to: '/business/rewards', icon: Gift, label: 'Rewards' },
+  { to: '/business/levels', icon: Shield, label: 'Niveles' },
   { to: '/business/settings', icon: Settings, label: 'Settings' },
 ];
 

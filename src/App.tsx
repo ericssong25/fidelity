@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-route
 import { AppProvider, useApp } from './context/AppContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { BusinessDataProvider } from './context/BusinessDataContext';
+import { NotificationProvider } from './context/NotificationContext';
 import BottomNav from './components/BottomNav';
 import BusinessSidebar from './components/BusinessSidebar';
 import BusinessBottomNav from './components/BusinessBottomNav';
@@ -15,6 +16,7 @@ import AuthPage from './pages/auth/AuthPage';
 import HomePage from './pages/customer/HomePage';
 import CardsPage from './pages/customer/CardsPage';
 import CardDetailPage from './pages/customer/CardDetailPage';
+import NotificationsPage from './pages/customer/NotificationsPage';
 import ProfilePage from './pages/customer/ProfilePage';
 
 // Business Pages
@@ -23,22 +25,26 @@ import CustomersPage from './pages/business/CustomersPage';
 import ProductsPage from './pages/business/ProductsPage';
 import PromotionsPage from './pages/business/PromotionsPage';
 import RewardsPage from './pages/business/RewardsPage';
+import LevelsPage from './pages/business/LevelsPage';
 import NewsPage from './pages/business/NewsPage';
 import SettingsPage from './pages/business/SettingsPage';
 import ScanPurchasePage from './pages/business/ScanPurchasePage';
 
 function CustomerLayout() {
   return (
-    <div className="max-w-[430px] mx-auto min-h-screen bg-[#F4F3FB] relative">
-      <Routes>
-        <Route path="/home" element={<HomePage />} />
-        <Route path="/cards" element={<CardsPage />} />
-        <Route path="/cards/:businessId" element={<CardDetailPage />} />
-        <Route path="/profile" element={<ProfilePage />} />
-        <Route path="*" element={<Navigate to="/home" replace />} />
-      </Routes>
-      <BottomNav />
-    </div>
+    <NotificationProvider>
+      <div className="max-w-[430px] mx-auto min-h-screen bg-[#F4F3FB] relative">
+        <Routes>
+          <Route path="/home" element={<HomePage />} />
+          <Route path="/cards" element={<CardsPage />} />
+          <Route path="/cards/:businessId" element={<CardDetailPage />} />
+          <Route path="/notifications" element={<NotificationsPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
+          <Route path="*" element={<Navigate to="/home" replace />} />
+        </Routes>
+        <BottomNav />
+      </div>
+    </NotificationProvider>
   );
 }
 
@@ -54,6 +60,7 @@ function BusinessLayout() {
             <Route path="/business/products" element={<ProductsPage />} />
             <Route path="/business/promotions" element={<PromotionsPage />} />
             <Route path="/business/rewards" element={<RewardsPage />} />
+            <Route path="/business/levels" element={<LevelsPage />} />
             <Route path="/business/news" element={<NewsPage />} />
             <Route path="/business/settings" element={<SettingsPage />} />
             <Route path="/business/scan/:cardId" element={<ScanPurchasePage />} />

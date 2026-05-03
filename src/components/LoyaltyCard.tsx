@@ -1,30 +1,41 @@
-import type { Level } from '../data/mockData';
+interface Props {
+  businessName: string;
+  currentPoints: number;
+  totalPointsEarned?: number;
+  level: string;
+  levelColor?: string;
+  visits: number;
+  compact?: boolean;
+}
 
-const gradients: Record<Level, string> = {
+const levelGradients: Record<string, string> = {
   Gold: 'linear-gradient(135deg, #7546ED, #DC89FF)',
   Silver: 'linear-gradient(135deg, #032C7D, #7546ED)',
   Bronze: 'linear-gradient(135deg, #12173B, #032C7D)',
 };
 
-const levelColors: Record<Level, string> = {
+const levelOrbs: Record<string, string> = {
   Gold: 'rgba(220, 137, 255, 0.3)',
   Silver: 'rgba(117, 70, 237, 0.3)',
   Bronze: 'rgba(3, 44, 125, 0.3)',
 };
 
-interface Props {
-  businessName: string;
-  points: number;
-  level: Level;
-  visits: number;
-  compact?: boolean;
+function getGradient(level: string, levelColor?: string): string {
+  return levelGradients[level] || `linear-gradient(135deg, ${levelColor || '#7546ED'}, #DC89FF)`;
 }
 
-export default function LoyaltyCard({ businessName, points, level, visits, compact = false }: Props) {
+function getOrbColor(level: string, levelColor?: string): string {
+  return levelOrbs[level] || `rgba(${levelColor ? parseInt(levelColor.slice(1, 3), 16) : 117}, ${levelColor ? parseInt(levelColor.slice(3, 5), 16) : 70}, ${levelColor ? parseInt(levelColor.slice(5, 7), 16) : 237}, 0.3)`;
+}
+
+export default function LoyaltyCard({ businessName, currentPoints, totalPointsEarned, level, levelColor, visits, compact = false }: Props) {
+  const gradient = getGradient(level, levelColor);
+  const orb = getOrbColor(level, levelColor);
+
   return (
     <div
       className={`relative overflow-hidden flex-shrink-0 ${compact ? 'w-44 h-28 rounded-2xl' : 'w-72 h-44 rounded-2xl'}`}
-      style={{ background: gradients[level] }}
+      style={{ background: gradient }}
     >
       {/* Noise texture overlay */}
       <div
@@ -39,7 +50,7 @@ export default function LoyaltyCard({ businessName, points, level, visits, compa
         style={{
           width: compact ? 80 : 120,
           height: compact ? 80 : 120,
-          background: levelColors[level],
+          background: orb,
           backdropFilter: 'blur(20px)',
         }}
       />
@@ -69,12 +80,17 @@ export default function LoyaltyCard({ businessName, points, level, visits, compa
         <div className="flex-1 flex items-end justify-between">
           <div>
             <p className={`text-white font-extrabold leading-none ${compact ? 'text-2xl' : 'text-4xl'}`}>
-              {points.toLocaleString()}
+              {currentPoints.toLocaleString()}
             </p>
-            <p className={`text-white/60 mt-0.5 ${compact ? 'text-[9px]' : 'text-xs'}`}>points</p>
+            <p className={`text-white/60 mt-0.5 ${compact ? 'text-[9px]' : 'text-xs'}`}>pts disponibles</p>
+            {totalPointsEarned !== undefined && (
+              <p className={`text-white/50 ${compact ? 'text-[8px]' : 'text-[10px]'} mt-0.5`}>
+                {totalPointsEarned.toLocaleString()} acumulados
+              </p>
+            )}
           </div>
           <p className={`text-white/60 ${compact ? 'text-[9px]' : 'text-xs'}`}>
-            {visits} visits
+            {visits} visitas
           </p>
         </div>
       </div>
