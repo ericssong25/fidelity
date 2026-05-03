@@ -45,6 +45,11 @@ export function usePurchaseRegistration({
   const [productSearch, setProductSearch] = useState('');
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
 
+  // Multiplier / discount info for the current customer
+  const [customerMultiplier, setCustomerMultiplier] = useState(1);
+  const [customerDiscount, setCustomerDiscount] = useState(0);
+  const [customerLevelName, setCustomerLevelName] = useState('');
+
   async function loadProducts() {
     if (!businessId) return;
 
@@ -71,13 +76,48 @@ export function usePurchaseRegistration({
     }
   }
 
-  function openPurchase(info: CustomerInfo) {
+  async function openPurchase(info: CustomerInfo) {
     setCustomer(info);
     setCart([]);
     setProductSearch('');
     setFilteredProducts([]);
+    setCustomerMultiplier(1);
+    setCustomerDiscount(0);
+    setCustomerLevelName('');
     setPurchaseModal(true);
     loadProducts();
+
+    // Fetch multiplier and discount for this customer's current level
+    if (!businessId) return;
+
+    try {
+      const { data: card } = await supabase
+        .from('loyalty_cards')
+        .select('current_level, business_id')
+        .eq('id', info.loyaltyCardId)
+        .maybeSingle();
+
+      if (card?.current_level) {
+        const { data: biz } = await supabase
+          .from('businesses')
+          .select('loyalty_levels')
+          .eq('id', card.business_id)
+          .maybeSingle();
+
+        const levels = biz?.loyalty_levels as Array<{
+          name: string; multiplier: number; discount_percent: number;
+        }> | undefined;
+
+        const level = levels?.find(l => l.name === card.current_level);
+        if (level) {
+          setCustomerMultiplier(level.multiplier || 1);
+          setCustomerDiscount(level.discount_percent || 0);
+          setCustomerLevelName(level.name);
+        }
+      }
+    } catch {
+      // Silently fail — multiplier info is cosmetic
+    }
   }
 
   function closePurchase() {
@@ -99,7 +139,7 @@ export function usePurchaseRegistration({
       .filter(
         p =>
           p.name.toLowerCase().includes(search) ||
-          p.category.toLowerCase().includes(search)
+          (p.category || '').toLowerCase().includes(search)
       )
       .slice(0, 5);
 
@@ -136,6 +176,7 @@ export function usePurchaseRegistration({
 
   const cartTotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const cartPoints = cart.reduce((sum, item) => sum + item.points * item.quantity, 0);
+  const cartMultipliedPoints = Math.round(cartPoints * customerMultiplier);
 
   async function handleSubmitPurchase() {
     if (!businessId || !customer) {
@@ -165,16 +206,16 @@ export function usePurchaseRegistration({
       }
 
       const totalAmount = cartTotal;
-      const totalPoints = cartPoints;
+      const basePoints = cartPoints;
 
-      // 1. Create the purchase record
+      // 1. Create the purchase record (trigger applies multiplier to total_points)
       const { data: purchase, error: purchaseError } = await supabase
         .from('purchases')
         .insert({
           loyalty_card_id: loyaltyCard.id,
           business_id: businessId,
           total_amount: totalAmount,
-          total_points: totalPoints,
+          total_points: basePoints,
           status: 'completed',
           payment_method: 'cash',
           notes: '',
@@ -189,6 +230,9 @@ export function usePurchaseRegistration({
         setIsProcessingPurchase(false);
         return;
       }
+
+      // purchase.total_points is already multiplied by the DB trigger
+      const earnedPoints = purchase.total_points;
 
       // 2. Create purchase items
       const purchaseItems = cart.map(item => ({
@@ -211,7 +255,7 @@ export function usePurchaseRegistration({
         return;
       }
 
-      // 3. Create point transaction
+      // 3. Create point transaction (with multiplied points)
       const itemDescriptions = cart
         .map(item => `${item.quantity} ${item.name}${item.quantity > 1 ? 's' : ''}`)
         .join(', ');
@@ -221,7 +265,7 @@ export function usePurchaseRegistration({
         .insert({
           loyalty_card_id: loyaltyCard.id,
           type: 'earned',
-          points: totalPoints,
+          points: earnedPoints,
           description: itemDescriptions,
           reference_id: purchase.id,
           reference_type: 'purchase',
@@ -232,12 +276,12 @@ export function usePurchaseRegistration({
         console.error('Point transaction error:', transactionError);
       }
 
-      // 4. Update loyalty card
+      // 4. Update loyalty card (with multiplied points)
       const { error: updateError } = await supabase
         .from('loyalty_cards')
         .update({
-          current_points: (loyaltyCard.current_points || 0) + totalPoints,
-          total_points_earned: (loyaltyCard.total_points_earned || 0) + totalPoints,
+          current_points: (loyaltyCard.current_points || 0) + earnedPoints,
+          total_points_earned: (loyaltyCard.total_points_earned || 0) + earnedPoints,
           total_visits: (loyaltyCard.total_visits || 0) + 1,
           last_visit: new Date().toISOString(),
           updated_at: new Date().toISOString(),
@@ -248,7 +292,8 @@ export function usePurchaseRegistration({
         console.error('Card update error:', updateError);
       }
 
-      showToast(`¡Compra completada! +${totalPoints} puntos agregados`, 'success');
+      const multiplierMsg = customerMultiplier > 1 ? ` (×${customerMultiplier} ${customerLevelName})` : '';
+      showToast(`¡Compra completada! +${earnedPoints} puntos agregados${multiplierMsg}`, 'success');
 
       setCart([]);
       setPurchaseModal(false);
@@ -275,7 +320,11 @@ export function usePurchaseRegistration({
     setProductSearch,
     filteredProducts,
     cartTotal,
-    cartPoints,
+    cartPoints: cartMultipliedPoints,
+    cartBasePoints: cartPoints,
+    customerMultiplier,
+    customerDiscount,
+    customerLevelName,
     openPurchase,
     closePurchase,
     addToCart,

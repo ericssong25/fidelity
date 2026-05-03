@@ -489,9 +489,16 @@ export default function CardDetailPage() {
                   </div>
                 )}
 
-                {currentLevel.perks && currentLevel.perks.length > 0 && (
+                {currentLevel.perks && currentLevel.perks.length > 0 && (() => {
+                  const visiblePerks = currentLevel.perks.filter((perk: string) => {
+                    if (currentLevel.multiplier > 1 && /\d+(?:\.\d+)?x|puntos por compra/i.test(perk)) return false;
+                    if (currentLevel.discount_percent > 0 && /\d+%\s*descuento|descuento permanente/i.test(perk)) return false;
+                    return true;
+                  });
+                  if (visiblePerks.length === 0) return null;
+                  return (
                   <div className="space-y-2">
-                    {currentLevel.perks.map((perk: string, i: number) => (
+                    {visiblePerks.map((perk: string, i: number) => (
                       <div
                         key={i}
                         className="rounded-2xl p-4 shadow-sm flex items-center gap-3"
@@ -505,7 +512,8 @@ export default function CardDetailPage() {
                       </div>
                     ))}
                   </div>
-                )}
+                  );
+                })()}
               </div>
 
               {/* Next levels section */}

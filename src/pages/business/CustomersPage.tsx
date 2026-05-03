@@ -712,6 +712,16 @@ export default function CustomersPage() {
             <div>
               <p className="text-[#12173B] font-semibold text-sm">{purchase.customer?.name}</p>
               <p className="text-[#B1A9E5] text-xs">{purchase.customer?.points} pts • {purchase.customer?.visits} visitas</p>
+              {purchase.customerMultiplier > 1 && (
+                <p className="text-[#7546ED] text-xs font-semibold mt-0.5">
+                  ×{purchase.customerMultiplier} puntos ({purchase.customerLevelName})
+                </p>
+              )}
+              {purchase.customerDiscount > 0 && (
+                <p className="text-[#10B981] text-xs font-semibold">
+                  {purchase.customerDiscount}% descuento ({purchase.customerLevelName})
+                </p>
+              )}
             </div>
             {purchase.cart.length > 0 && (
               <div className="text-right">
