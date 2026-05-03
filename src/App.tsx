@@ -85,7 +85,7 @@ function AuthGuard() {
     return <AuthenticatedRoutes />;
   }
 
-  return <Navigate to="/auth" replace state={{ from: location.pathname }} />;
+  return <Navigate to="/auth" replace state={{ from: location.pathname + location.search }} />;
 }
 
 function AppRoutes() {
@@ -96,7 +96,8 @@ function AppRoutes() {
 
     const timeoutId = setTimeout(() => {
       console.warn('Auth loading timeout (>12s) → forcing reload');
-      window.location.href = '/auth';
+      const redirect = encodeURIComponent(window.location.pathname + window.location.search);
+      window.location.href = `/auth?redirect=${redirect}`;
     }, 12000);
 
     return () => clearTimeout(timeoutId);

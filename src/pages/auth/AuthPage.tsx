@@ -9,7 +9,8 @@ export default function AuthPage() {
   const { login, register, isLoading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const returnUrl = (location.state as { from?: string })?.from;
+  const redirectParam = new URLSearchParams(location.search).get('redirect');
+  const returnUrl = (location.state as { from?: string })?.from || redirectParam || undefined;
   const [isSignIn, setIsSignIn] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);

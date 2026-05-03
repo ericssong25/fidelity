@@ -638,12 +638,12 @@ const [topCustomers, setTopCustomers] = useState<TopCustomer[]>([]);
       {showScanner && (
         <QrScanner
           onScan={(url) => {
-            setShowScanner(false);
             const match = url.match(/\/business\/scan\/([a-f0-9-]+)/i);
             if (match) {
               navigate(`/business/scan/${match[1]}`);
             } else {
               showToast('Código QR no válido', 'error');
+              setShowScanner(false);
             }
           }}
           onClose={() => setShowScanner(false)}

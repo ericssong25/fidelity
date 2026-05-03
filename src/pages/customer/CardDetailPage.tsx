@@ -44,7 +44,7 @@ export default function CardDetailPage() {
   const navigate = useNavigate();
   const { showToast } = useApp();
   const { user } = useAuth();
-  const [tab, setTab] = useState<Tab>('Actividad');
+  const [tab, setTab] = useState<Tab>('Mi QR');
   const [redeemModal, setRedeemModal] = useState<{ id: string; name: string; cost: number } | null>(null);
   const [isRedeeming, setIsRedeeming] = useState(false);
   

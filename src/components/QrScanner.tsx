@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useMemo } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
 import { X } from 'lucide-react';
 
@@ -9,9 +9,11 @@ interface QrScannerProps {
 
 export default function QrScanner({ onScan, onClose }: QrScannerProps) {
   const scannerRef = useRef<Html5Qrcode | null>(null);
-  const scannerDivId = 'qr-scanner-viewfinder';
+  const mountedRef = useRef(true);
+  const scannerDivId = useMemo(() => `qr-scanner-${Math.random().toString(36).slice(2, 8)}`, []);
 
   useEffect(() => {
+    mountedRef.current = true;
     const scanner = new Html5Qrcode(scannerDivId);
     scannerRef.current = scanner;
 
@@ -24,19 +26,26 @@ export default function QrScanner({ onScan, onClose }: QrScannerProps) {
           aspectRatio: 1,
         },
         (decodedText) => {
-          scanner.stop().catch(() => {});
-          onScan(decodedText);
+          // Do NOT stop the scanner here — the cleanup will handle it
+          // when the component unmounts after navigation.
+          // Just notify the parent and let React Router unmount us.
+          if (mountedRef.current) {
+            onScan(decodedText);
+          }
         },
         () => {
-          // Ignore scan errors (frame didn't contain a QR)
+          // Ignore intermediate scan errors (frame without QR)
         }
       )
       .catch((err) => {
         console.error('Camera start error:', err);
-        onClose();
+        if (mountedRef.current) {
+          onClose();
+        }
       });
 
     return () => {
+      mountedRef.current = false;
       scanner
         .stop()
         .catch(() => {});
@@ -50,6 +59,7 @@ export default function QrScanner({ onScan, onClose }: QrScannerProps) {
         <h2 className="text-white font-extrabold text-lg">Escanear QR</h2>
         <button
           onClick={() => {
+            mountedRef.current = false;
             scannerRef.current?.stop().catch(() => {});
             onClose();
           }}
@@ -65,7 +75,6 @@ export default function QrScanner({ onScan, onClose }: QrScannerProps) {
         {/* Viewfinder overlay */}
         <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
           <div className="w-[250px] h-[250px] relative">
-            {/* Corner brackets */}
             <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-white rounded-tl-lg" />
             <div className="absolute top-0 right-0 w-8 h-8 border-t-2 border-r-2 border-white rounded-tr-lg" />
             <div className="absolute bottom-0 left-0 w-8 h-8 border-b-2 border-l-2 border-white rounded-bl-lg" />
