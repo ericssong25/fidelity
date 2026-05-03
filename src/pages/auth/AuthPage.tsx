@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Eye, EyeOff, Mail, Lock, User } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, User, Phone } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -23,6 +23,7 @@ export default function AuthPage() {
   const [signUpName, setSignUpName] = useState('');
   const [signUpEmail, setSignUpEmail] = useState('');
   const [signUpUsername, setSignUpUsername] = useState('@');
+  const [signUpPhone, setSignUpPhone] = useState('');
   const [signUpPassword, setSignUpPassword] = useState('');
   const [signUpConfirmPassword, setSignUpConfirmPassword] = useState('');
 
@@ -87,24 +88,29 @@ export default function AuthPage() {
         name: signUpName,
         email: signUpEmail,
         username: signUpUsername,
+        phone: signUpPhone,
         password: signUpPassword
       });
       
       if (success) {
-        showToast('¡Cuenta creada! Revisa tu email para verificar tu cuenta.', 'success');
-        // Don't navigate immediately - let user verify email first
-        // Or you can navigate to a "verify email" page
-        // navigate('/home');
+        showToast('¡Cuenta creada exitosamente!', 'success');
+        
+        // Auto-login after registration
+        const loginSuccess = await login(signUpEmail, signUpPassword);
+        if (loginSuccess) {
+          navigate(returnUrl || '/home');
+        } else {
+          showToast('Cuenta creada. Por favor inicia sesión.', 'info');
+          setIsSignIn(true);
+        }
         
         // Clear form
         setSignUpName('');
         setSignUpEmail('');
         setSignUpUsername('@');
+        setSignUpPhone('');
         setSignUpPassword('');
         setSignUpConfirmPassword('');
-        
-        // Switch to sign in form
-        setIsSignIn(true);
       }
     } catch (error: unknown) {
       const err = error as { message?: string };
@@ -208,20 +214,6 @@ export default function AuthPage() {
             /* Sign Up Form */
             <form onSubmit={handleSignUp} className="space-y-4">
               <div>
-                <label className="text-xs font-semibold text-[#B1A9E5] mb-1 block">Nombre completo</label>
-                <div className="relative">
-                  <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#B1A9E5]" />
-                  <input
-                    type="text"
-                    value={signUpName}
-                    onChange={e => setSignUpName(e.target.value)}
-                    placeholder="Ingresa tu nombre completo"
-                    className="w-full pl-10 pr-4 py-3 rounded-inp border border-[#B1A9E5]/30 text-sm text-[#12173B] placeholder-[#B1A9E5] outline-none focus:border-[#7546ED] focus:ring-2 focus:ring-[#7546ED]/10 transition-all"
-                  />
-                </div>
-              </div>
-
-              <div>
                 <label className="text-xs font-semibold text-[#B1A9E5] mb-1 block">Correo electrónico</label>
                 <div className="relative">
                   <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#B1A9E5]" />
@@ -230,28 +222,6 @@ export default function AuthPage() {
                     value={signUpEmail}
                     onChange={e => setSignUpEmail(e.target.value)}
                     placeholder="Ingresa tu correo"
-                    className="w-full pl-10 pr-4 py-3 rounded-inp border border-[#B1A9E5]/30 text-sm text-[#12173B] placeholder-[#B1A9E5] outline-none focus:border-[#7546ED] focus:ring-2 focus:ring-[#7546ED]/10 transition-all"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-xs font-semibold text-[#B1A9E5] mb-1 block">Usuario</label>
-                <div className="relative">
-                  <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#B1A9E5]" />
-                  <input
-                    type="text"
-                    value={signUpUsername}
-                    onChange={e => {
-                      const value = e.target.value;
-                      // Always ensure @ at the beginning
-                      if (!value.startsWith('@')) {
-                        setSignUpUsername('@' + value);
-                      } else {
-                        setSignUpUsername(value);
-                      }
-                    }}
-                    placeholder="@username"
                     className="w-full pl-10 pr-4 py-3 rounded-inp border border-[#B1A9E5]/30 text-sm text-[#12173B] placeholder-[#B1A9E5] outline-none focus:border-[#7546ED] focus:ring-2 focus:ring-[#7546ED]/10 transition-all"
                   />
                 </div>
@@ -296,6 +266,65 @@ export default function AuthPage() {
                   >
                     {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-[#B1A9E5] mb-1 block">Nombre completo</label>
+                <div className="relative">
+                  <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#B1A9E5]" />
+                  <input
+                    type="text"
+                    value={signUpName}
+                    onChange={e => setSignUpName(e.target.value)}
+                    placeholder="Ingresa tu nombre completo"
+                    className="w-full pl-10 pr-4 py-3 rounded-inp border border-[#B1A9E5]/30 text-sm text-[#12173B] placeholder-[#B1A9E5] outline-none focus:border-[#7546ED] focus:ring-2 focus:ring-[#7546ED]/10 transition-all"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-[#B1A9E5] mb-1 block">Usuario</label>
+                <div className="relative">
+                  <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#B1A9E5]" />
+                  <input
+                    type="text"
+                    value={signUpUsername}
+                    onChange={e => {
+                      const value = e.target.value;
+                      // Always ensure @ at the beginning
+                      if (!value.startsWith('@')) {
+                        setSignUpUsername('@' + value);
+                      } else {
+                        setSignUpUsername(value);
+                      }
+                    }}
+                    placeholder="@username"
+                    className="w-full pl-10 pr-4 py-3 rounded-inp border border-[#B1A9E5]/30 text-sm text-[#12173B] placeholder-[#B1A9E5] outline-none focus:border-[#7546ED] focus:ring-2 focus:ring-[#7546ED]/10 transition-all"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-[#B1A9E5] mb-1 block">Teléfono</label>
+                <div className="relative">
+                  <Phone size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#B1A9E5]" />
+                  <input
+                    type="tel"
+                    value={signUpPhone}
+                    onChange={e => {
+                      const raw = e.target.value.replace(/\D/g, '').slice(0, 11);
+                      let formatted = raw;
+                      if (raw.length > 7) {
+                        formatted = `${raw.slice(0, 4)}-${raw.slice(4, 7)}-${raw.slice(7)}`;
+                      } else if (raw.length > 4) {
+                        formatted = `${raw.slice(0, 4)}-${raw.slice(4)}`;
+                      }
+                      setSignUpPhone(formatted);
+                    }}
+                    placeholder="1234-567-8901"
+                    className="w-full pl-10 pr-4 py-3 rounded-inp border border-[#B1A9E5]/30 text-sm text-[#12173B] placeholder-[#B1A9E5] outline-none focus:border-[#7546ED] focus:ring-2 focus:ring-[#7546ED]/10 transition-all"
+                  />
                 </div>
               </div>
 

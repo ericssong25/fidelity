@@ -8,6 +8,7 @@ interface User {
   name: string;
   email: string;
   username: string;
+  phone: string | null;
   initials: string;
 }
 
@@ -22,6 +23,7 @@ interface AuthContextType {
     name: string;
     email: string;
     username: string;
+    phone: string;
     password: string;
   }) => Promise<boolean>;
   refreshAuth: () => Promise<void>;
@@ -43,7 +45,7 @@ async function buildUser(supabaseUser: SupabaseUser): Promise<User> {
 
   const profilePromise = supabase
     .from('profiles')
-    .select('name, username')
+    .select('name, username, phone')
     .eq('id', supabaseUser.id)
     .maybeSingle();
 
@@ -57,12 +59,14 @@ async function buildUser(supabaseUser: SupabaseUser): Promise<User> {
   const profileData = profileResult?.data || null;
   const name = profileData?.name || supabaseUser.email?.split('@')[0] || 'User';
   const username = profileData?.username || `@${supabaseUser.email?.split('@')[0]}` || '@user';
+  const phone = profileData?.phone || null;
 
   return {
     id: supabaseUser.id,
     name,
     email: supabaseUser.email || '',
     username,
+    phone,
     initials: name
       .split(' ')
       .map((n: string) => n[0])
@@ -152,6 +156,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           name,
           email: validatedUser.email || '',
           username: `@${validatedUser.email?.split('@')[0] || 'user'}`,
+          phone: null,
           initials: name.slice(0, 2).toUpperCase(),
         };
         if (isMounted) {
@@ -182,6 +187,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               name,
               email: session.user.email || '',
               username: `@${session.user.email?.split('@')[0] || 'user'}`,
+              phone: null,
               initials: name.slice(0, 2).toUpperCase(),
             };
             setSupabaseUser(session.user);
@@ -229,6 +235,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     name: string;
     email: string;
     username: string;
+    phone: string;
     password: string;
   }): Promise<boolean> => {
     try {
@@ -239,6 +246,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           data: {
             name: userData.name,
             username: userData.username,
+            phone: userData.phone,
           },
         },
       });

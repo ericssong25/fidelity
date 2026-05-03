@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState, useEffect } from 'react';
-import { Search, X, Plus, CreditCard, AlertCircle, RefreshCw, ShoppingCart, Minus, Trash2 } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { Search, X, Plus, CreditCard, AlertCircle, RefreshCw, ShoppingCart, Minus, Trash2, CheckCircle2, MessageCircle } from 'lucide-react';
 import Modal from '../../components/Modal';
 import { useApp } from '../../context/AppContext';
 import { useBusinessData } from '../../context/BusinessDataContext';
@@ -15,6 +15,8 @@ const levelBadge: Record<Level, string> = {
   Bronze: 'bg-[#12173B] text-white',
 };
 
+const defaultLevel: Level = 'Bronze';
+
 interface SelectedCustomer {
   id: string;
   loyaltyCardId: string;
@@ -25,6 +27,7 @@ interface SelectedCustomer {
   visits: number;
   lastVisit: string;
   username: string;
+  phone: string | null;
   transactions: { id: string; description: string; date: string; points: number }[];
 }
 
@@ -40,6 +43,9 @@ export default function CustomersPage() {
   const [adjustAmount, setAdjustAmount] = useState('');
   const [adjustReason, setAdjustReason] = useState('');
   const [isLoadingTransactions, setIsLoadingTransactions] = useState(false);
+  
+  // Level names map
+  const [levelNames, setLevelNames] = useState<Record<string, Level>>({});
   
   // Card creation state
   const [cardModal, setCardModal] = useState(false);
@@ -57,6 +63,54 @@ export default function CustomersPage() {
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [existingCardUserIds, setExistingCardUserIds] = useState<Set<string>>(new Set());
+
+  // Fetch level names when business changes
+  useEffect(() => {
+    if (!business?.id) return;
+
+    supabase
+      .from('loyalty_levels')
+      .select('id, name')
+      .eq('business_id', business.id)
+      .then(({ data }) => {
+        const map: Record<string, Level> = {};
+        data?.forEach((l: { id: string; name: string }) => {
+          const name = l.name as Level;
+          if (name === 'Bronze' || name === 'Silver' || name === 'Gold') {
+            map[l.id] = name;
+          }
+        });
+        setLevelNames(map);
+      });
+  }, [business?.id]);
+
+  // Track which users already have cards (for search results indicator)
+  useEffect(() => {
+    setExistingCardUserIds(new Set(loyaltyCards.filter(c => c.is_active).map(c => c.user_id)));
+  }, [loyaltyCards]);
+
+  // Filtered cards
+  const filteredCards = useMemo(() => {
+    return loyaltyCards.filter(card => {
+      const name = card.profiles?.name || '';
+      const username = card.profiles?.username || '';
+      const email = card.profiles?.email || '';
+      const searchLower = search.toLowerCase();
+
+      const matchesSearch = !searchLower ||
+        name.toLowerCase().includes(searchLower) ||
+        username.toLowerCase().includes(searchLower) ||
+        email.toLowerCase().includes(searchLower);
+
+      const cardLevel = card.current_level_id
+        ? (levelNames[card.current_level_id] || defaultLevel)
+        : defaultLevel;
+      const matchesLevel = levelFilter === 'All' || cardLevel === levelFilter;
+
+      return matchesSearch && matchesLevel;
+    });
+  }, [loyaltyCards, search, levelFilter, levelNames]);
 
   function handleAdjust() {
     setAdjustModal(false);
@@ -140,7 +194,7 @@ export default function CustomersPage() {
         .select('id')
         .eq('user_id', selectedUser.id)
         .eq('business_id', business.id)
-        .single();
+        .maybeSingle();
 
       if (existingCard) {
         showToast('Este usuario ya tiene tarjeta en tu negocio', 'error');
@@ -192,10 +246,11 @@ export default function CustomersPage() {
     setIsSearching(true);
     
     try {
+      const searchTerm = `%${query.trim()}%`;
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, name, email, username')
-        .or(`email.ilike.%${query}%,username.ilike.%${query}%,name.ilike.%${query}%`)
+        .select('id, name, email, username, phone')
+        .or(`email.ilike.${searchTerm},username.ilike.${searchTerm},name.ilike.${searchTerm}`)
         .limit(5);
       
       if (error) {
@@ -214,6 +269,10 @@ export default function CustomersPage() {
 
   // Handle user selection
   function handleUserSelect(user: any) {
+    if (existingCardUserIds.has(user.id)) {
+      showToast('Este usuario ya tiene tarjeta en tu negocio', 'error');
+      return;
+    }
     setSelectedUser(user);
     setUserSearch(`${user.name} (${user.email})`);
     setSearchResults([]);
@@ -304,14 +363,23 @@ export default function CustomersPage() {
 
       {/* Customer list with real cards */}
       <div className="space-y-3">
-        {loyaltyCards.length === 0 ? (
+        {filteredCards.length === 0 ? (
           <div className="text-center py-8">
             <CreditCard size={48} className="text-[#B1A9E5] mx-auto mb-4" />
-            <p className="text-[#B1A9E5] text-sm">Sin tarjetas de lealtad aún</p>
-            <p className="text-[#B1A9E5] text-xs mt-1">Presiona + para crear tu primera tarjeta</p>
+            <p className="text-[#B1A9E5] text-sm">
+              {search || levelFilter !== 'All' ? 'Sin resultados' : 'Sin tarjetas de lealtad aún'}
+            </p>
+            <p className="text-[#B1A9E5] text-xs mt-1">
+              {search || levelFilter !== 'All' ? 'Ajusta los filtros' : 'Presiona + para crear tu primera tarjeta'}
+            </p>
           </div>
         ) : (
-          loyaltyCards.map((card: any) => (
+          filteredCards.map((card: any) => {
+            const cardLevel = card.current_level_id
+              ? (levelNames[card.current_level_id] || defaultLevel)
+              : defaultLevel;
+              
+            return (
             <div
               key={card.id}
               onClick={() => handleSelectCustomer({
@@ -319,11 +387,12 @@ export default function CustomersPage() {
                 loyaltyCardId: card.id,
                 name: card.profiles?.name || 'Unknown',
                 initials: (card.profiles?.name || 'Unknown').split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2),
-                level: 'Bronze',
+                level: cardLevel,
                 points: card.current_points,
                 visits: card.total_visits,
                 lastVisit: new Date(card.issued_at).toLocaleDateString(),
                 username: card.profiles?.username || '',
+                phone: card.profiles?.phone || null,
                 transactions: []
               })}
               className="bg-white rounded-2xl p-4 shadow-sm border border-[#B1A9E5]/10 flex items-center gap-3 cursor-pointer hover:shadow-md transition-all"
@@ -335,12 +404,15 @@ export default function CustomersPage() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <p className="font-bold text-[#12173B] text-sm truncate">{card.profiles?.name || 'Unknown'}</p>
-                  <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${levelBadge['Bronze']}`}>
-                    Bronze
+                  <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${levelBadge[cardLevel]}`}>
+                    {cardLevel}
                   </span>
                 </div>
                 <p className="text-[#B1A9E5] text-xs">{card.profiles?.email || 'No email'}</p>
                 <p className="text-[#B1A9E5] text-xs">{card.profiles?.username || 'No username'}</p>
+                {card.profiles?.phone && (
+                  <p className="text-[#B1A9E5] text-xs">{card.profiles.phone}</p>
+                )}
               </div>
               <div className="text-right">
                 <p className="font-bold text-[#7546ED] text-lg">{card.current_points}</p>
@@ -348,7 +420,8 @@ export default function CustomersPage() {
                 <p className="text-[#B1A9E5] text-xs mt-1">{card.total_visits} visits</p>
               </div>
             </div>
-          ))
+            );
+          })
         )}
       </div>
 
@@ -406,6 +479,17 @@ export default function CustomersPage() {
                   </button>
                 </div>
               </div>
+              {selected.phone && (
+                <a
+                  href={`https://wa.me/${selected.phone.replace(/\D/g, '')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full flex items-center justify-center gap-2 mb-4 py-2 rounded-btn bg-[#25D366]/10 text-[#25D366] text-xs font-bold hover:bg-[#25D366]/20 transition-colors"
+                >
+                  <MessageCircle size={14} />
+                  Enviar mensaje por WhatsApp
+                </a>
+              )}
               <div className="space-y-2">
                 {isLoadingTransactions ? (
                   <div className="text-center py-4">
@@ -511,29 +595,45 @@ export default function CustomersPage() {
                 )}
               </div>
               
-              {/* Search Results Dropdown */}
+               {/* Search Results Dropdown */}
               {searchResults.length > 0 && (
-                <div className="absolute z-50 w-full mt-1 bg-white border border-[#B1A9E5]/20 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                  {searchResults.map((user: any) => (
-                    <button
-                      key={user.id}
-                      onClick={() => handleUserSelect(user)}
-                      className="w-full px-3 py-2 text-left hover:bg-[#F4F3FB] transition-colors border-b border-[#B1A9E5]/10 last:border-b-0"
-                    >
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-full bg-[#7546ED] text-white flex items-center justify-center text-xs font-bold">
-                          {(user.name || 'User').split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)}
+                <div className="mt-1 bg-white border border-[#B1A9E5]/20 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                  {searchResults.map((user: any) => {
+                    const alreadyHasCard = existingCardUserIds.has(user.id);
+                    return (
+                      <button
+                        key={user.id}
+                        onClick={() => handleUserSelect(user)}
+                        disabled={alreadyHasCard}
+                        className={`w-full px-3 py-2 text-left transition-colors border-b border-[#B1A9E5]/10 last:border-b-0 ${
+                          alreadyHasCard
+                            ? 'opacity-60 cursor-not-allowed bg-[#F4F3FB]'
+                            : 'hover:bg-[#F4F3FB]'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-full bg-[#7546ED] text-white flex items-center justify-center text-xs font-bold flex-shrink-0">
+                            {(user.name || 'User').split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <p className="font-semibold text-[#12173B] text-sm truncate">{user.name || 'Unknown'}</p>
+                              {alreadyHasCard && (
+                                <span className="flex-shrink-0 flex items-center gap-0.5 text-[10px] font-semibold text-[#10B981] bg-[#10B981]/10 px-1.5 py-0.5 rounded-full">
+                                  <CheckCircle2 size={10} />
+                                  Ya tiene tarjeta
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-[#B1A9E5] text-xs truncate">{user.email}</p>
+                            {user.username && (
+                              <p className="text-[#B1A9E5] text-xs">{user.username}</p>
+                            )}
+                          </div>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-semibold text-[#12173B] text-sm truncate">{user.name || 'Unknown'}</p>
-                          <p className="text-[#B1A9E5] text-xs truncate">{user.email}</p>
-                          {user.username && (
-                            <p className="text-[#B1A9E5] text-xs">@{user.username}</p>
-                          )}
-                        </div>
-                      </div>
-                    </button>
-                  ))}
+                      </button>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -549,7 +649,7 @@ export default function CustomersPage() {
                     <p className="font-semibold text-[#12173B] text-sm">{selectedUser.name || 'Unknown'}</p>
                     <p className="text-[#B1A9E5] text-xs">{selectedUser.email}</p>
                     {selectedUser.username && (
-                      <p className="text-[#B1A9E5] text-xs">@{selectedUser.username}</p>
+                      <p className="text-[#B1A9E5] text-xs">{selectedUser.username}</p>
                     )}
                   </div>
                   <button

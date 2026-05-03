@@ -8,6 +8,7 @@ interface Profile {
   name: string;
   email: string;
   username: string;
+  phone: string | null;
 }
 
 interface LoyaltyCard {
@@ -156,7 +157,7 @@ export function BusinessDataProvider({ children }: { children: ReactNode }) {
             if (userIds.length > 0) {
               const { data: profiles } = await supabase
                 .from('profiles')
-                .select('id, name, email, username')
+                .select('id, name, email, username, phone')
                 .in('id', userIds);
 
               profiles?.forEach((p: Profile) => {
@@ -227,7 +228,7 @@ export function BusinessDataProvider({ children }: { children: ReactNode }) {
           if (userIds.length > 0) {
             const { data: profiles } = await supabase
               .from('profiles')
-              .select('id, name, email, username')
+              .select('id, name, email, username, phone')
               .in('id', userIds);
 
             profiles?.forEach((p: Profile) => {
@@ -271,7 +272,7 @@ export function BusinessDataProvider({ children }: { children: ReactNode }) {
       if (userIds.length > 0) {
         const { data: profiles } = await supabase
           .from('profiles')
-          .select('id, name, email, username')
+          .select('id, name, email, username, phone')
           .in('id', userIds);
 
         profiles?.forEach((p: Profile) => {

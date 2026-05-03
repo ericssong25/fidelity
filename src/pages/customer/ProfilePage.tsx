@@ -182,6 +182,7 @@ export default function ProfilePage() {
   const [logoutModal, setLogoutModal] = useState(false);
   const [businessModal, setBusinessModal] = useState(false);
   const [editName, setEditName] = useState(displayUser.name);
+  const [editPhone, setEditPhone] = useState(displayUser.phone || '');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -267,10 +268,19 @@ export default function ProfilePage() {
   }
 
   function handleEditProfile() {
-    // Update name logic - in real app, this would update Supabase
     if (user) {
-      // For now, just show success message
-      showToast('¡Perfil actualizado!', 'success');
+      supabase
+        .from('profiles')
+        .update({ name: editName, phone: editPhone || null })
+        .eq('id', user.id)
+        .then(({ error }) => {
+          if (error) {
+            console.error('Error updating profile:', error);
+            showToast('Error al actualizar perfil', 'error');
+          } else {
+            showToast('¡Perfil actualizado!', 'success');
+          }
+        });
     }
     
     setEditModal(false);
@@ -297,6 +307,9 @@ export default function ProfilePage() {
         <h1 className="text-white font-extrabold text-xl">{displayUser.name}</h1>
         <p className="text-white/60 text-sm">{displayUser.username}</p>
         <p className="text-white/60 text-sm">{displayUser.email}</p>
+        {displayUser.phone && (
+          <p className="text-white/60 text-sm">{displayUser.phone}</p>
+        )}
       </div>
 
       {/* Stats */}
@@ -582,6 +595,26 @@ export default function ProfilePage() {
               value={editName} 
               onChange={e => setEditName(e.target.value)} 
               placeholder="Tu nombre"
+              className="w-full px-3 py-2.5 rounded-inp border border-[#B1A9E5]/30 text-sm text-[#12173B] outline-none focus:border-[#7546ED] transition-all" 
+            />
+          </div>
+
+          <div>
+            <label className="text-xs font-semibold text-[#B1A9E5] mb-1 block">Teléfono</label>
+            <input 
+              value={editPhone} 
+              onChange={e => {
+                const raw = e.target.value.replace(/\D/g, '').slice(0, 11);
+                let formatted = raw;
+                if (raw.length > 7) {
+                  formatted = `${raw.slice(0, 4)}-${raw.slice(4, 7)}-${raw.slice(7)}`;
+                } else if (raw.length > 4) {
+                  formatted = `${raw.slice(0, 4)}-${raw.slice(4)}`;
+                }
+                setEditPhone(formatted);
+              }}
+              type="tel"
+              placeholder="1234-567-8901"
               className="w-full px-3 py-2.5 rounded-inp border border-[#B1A9E5]/30 text-sm text-[#12173B] outline-none focus:border-[#7546ED] transition-all" 
             />
           </div>

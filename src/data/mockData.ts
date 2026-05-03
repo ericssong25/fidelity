@@ -20,6 +20,7 @@ export interface Customer {
   name: string;
   email: string;
   username: string;
+  phone: string | null;
   initials: string;
 }
 
@@ -96,6 +97,7 @@ export const sofia: Customer = {
   name: 'Sofia Martínez',
   email: 'sofia@email.com',
   username: '@sofiamar',
+  phone: null,
   initials: 'SM',
 };
 
