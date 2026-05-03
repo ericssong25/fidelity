@@ -313,16 +313,16 @@ export default function AuthPage() {
                     type="tel"
                     value={signUpPhone}
                     onChange={e => {
-                      const raw = e.target.value.replace(/\D/g, '').slice(0, 11);
+                      const raw = e.target.value.replace(/\D/g, '').slice(0, 10);
                       let formatted = raw;
-                      if (raw.length > 7) {
-                        formatted = `${raw.slice(0, 4)}-${raw.slice(4, 7)}-${raw.slice(7)}`;
-                      } else if (raw.length > 4) {
-                        formatted = `${raw.slice(0, 4)}-${raw.slice(4)}`;
+                      if (raw.length > 6) {
+                        formatted = `${raw.slice(0, 3)} ${raw.slice(3, 6)} ${raw.slice(6)}`;
+                      } else if (raw.length > 3) {
+                        formatted = `${raw.slice(0, 3)} ${raw.slice(3)}`;
                       }
                       setSignUpPhone(formatted);
                     }}
-                    placeholder="1234-567-8901"
+                    placeholder="424 123 4567"
                     className="w-full pl-10 pr-4 py-3 rounded-inp border border-[#B1A9E5]/30 text-sm text-[#12173B] placeholder-[#B1A9E5] outline-none focus:border-[#7546ED] focus:ring-2 focus:ring-[#7546ED]/10 transition-all"
                   />
                 </div>

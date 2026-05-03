@@ -481,7 +481,7 @@ export default function CustomersPage() {
               </div>
               {selected.phone && (
                 <a
-                  href={`https://wa.me/${selected.phone.replace(/\D/g, '')}`}
+                  href={`https://wa.me/58${selected.phone.replace(/\D/g, '')}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="w-full flex items-center justify-center gap-2 mb-4 py-2 rounded-btn bg-[#25D366]/10 text-[#25D366] text-xs font-bold hover:bg-[#25D366]/20 transition-colors"

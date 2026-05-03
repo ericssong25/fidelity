@@ -604,17 +604,17 @@ export default function ProfilePage() {
             <input 
               value={editPhone} 
               onChange={e => {
-                const raw = e.target.value.replace(/\D/g, '').slice(0, 11);
+                const raw = e.target.value.replace(/\D/g, '').slice(0, 10);
                 let formatted = raw;
-                if (raw.length > 7) {
-                  formatted = `${raw.slice(0, 4)}-${raw.slice(4, 7)}-${raw.slice(7)}`;
-                } else if (raw.length > 4) {
-                  formatted = `${raw.slice(0, 4)}-${raw.slice(4)}`;
+                if (raw.length > 6) {
+                  formatted = `${raw.slice(0, 3)} ${raw.slice(3, 6)} ${raw.slice(6)}`;
+                } else if (raw.length > 3) {
+                  formatted = `${raw.slice(0, 3)} ${raw.slice(3)}`;
                 }
                 setEditPhone(formatted);
               }}
               type="tel"
-              placeholder="1234-567-8901"
+              placeholder="424 123 4567"
               className="w-full px-3 py-2.5 rounded-inp border border-[#B1A9E5]/30 text-sm text-[#12173B] outline-none focus:border-[#7546ED] transition-all" 
             />
           </div>
