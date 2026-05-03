@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Eye, EyeOff, Mail, Lock, User, Phone } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, User } from 'lucide-react';
+import PhoneInput from '../../components/PhoneInput';
 import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -308,25 +309,10 @@ export default function AuthPage() {
 
               <div>
                 <label className="text-xs font-semibold text-[#B1A9E5] mb-1 block">Teléfono</label>
-                <div className="relative">
-                  <Phone size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#B1A9E5]" />
-                  <input
-                    type="tel"
-                    value={signUpPhone}
-                    onChange={e => {
-                      const raw = e.target.value.replace(/\D/g, '').slice(0, 10);
-                      let formatted = raw;
-                      if (raw.length > 6) {
-                        formatted = `${raw.slice(0, 3)} ${raw.slice(3, 6)} ${raw.slice(6)}`;
-                      } else if (raw.length > 3) {
-                        formatted = `${raw.slice(0, 3)} ${raw.slice(3)}`;
-                      }
-                      setSignUpPhone(formatted);
-                    }}
-                    placeholder="424 123 4567"
-                    className="w-full pl-10 pr-4 py-3 rounded-inp border border-[#B1A9E5]/30 text-sm text-[#12173B] placeholder-[#B1A9E5] outline-none focus:border-[#7546ED] focus:ring-2 focus:ring-[#7546ED]/10 transition-all"
-                  />
-                </div>
+                <PhoneInput
+                  value={signUpPhone}
+                  onChange={setSignUpPhone}
+                />
               </div>
 
               <button

@@ -239,6 +239,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     password: string;
   }): Promise<boolean> => {
     try {
+      // Check username uniqueness
+      const { data: existingUsername } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('username', userData.username)
+        .maybeSingle();
+
+      if (existingUsername) {
+        throw new Error('Este nombre de usuario ya está en uso.');
+      }
+
+      // Check phone uniqueness (if provided) — compare only digits
+      if (userData.phone) {
+        const cleanPhone = userData.phone.replace(/\D/g, '');
+        if (cleanPhone) {
+          const { data: profiles } = await supabase
+            .from('profiles')
+            .select('id, phone')
+            .not('phone', 'is', null);
+
+          const duplicate = profiles?.find(
+            (p: { id: string; phone: string }) => p.phone?.replace(/\D/g, '') === cleanPhone
+          );
+
+          if (duplicate) {
+            throw new Error('Este número de teléfono ya está registrado.');
+          }
+        }
+      }
+
       const { error } = await supabase.auth.signUp({
         email: userData.email,
         password: userData.password,

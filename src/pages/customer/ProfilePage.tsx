@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { HelpCircle, LogOut, ChevronRight, CreditCard as Edit3, Store, Building, Phone, MapPin } from 'lucide-react';
+import PhoneInput from '../../components/PhoneInput';
 import { sofia } from '../../data/mockData';
 import Modal from '../../components/Modal';
 import { useApp } from '../../context/AppContext';
@@ -255,8 +256,29 @@ export default function ProfilePage() {
     setBusinessForm(prev => ({ ...prev, [field]: value }));
   }
 
-  function handleEditProfile() {
+  async function handleEditProfile() {
     if (user) {
+      // Check phone uniqueness — compare only digits
+      if (editPhone) {
+        const cleanPhone = editPhone.replace(/\D/g, '');
+        if (cleanPhone) {
+          const { data: profiles } = await supabase
+            .from('profiles')
+            .select('id, phone')
+            .not('phone', 'is', null);
+
+          const duplicate = profiles?.find(
+            (p: { id: string; phone: string }) =>
+              p.id !== user.id && p.phone?.replace(/\D/g, '') === cleanPhone
+          );
+
+          if (duplicate) {
+            showToast('Este número de teléfono ya está en uso', 'error');
+            return;
+          }
+        }
+      }
+
       supabase
         .from('profiles')
         .update({ name: editName, phone: editPhone || null })
@@ -267,11 +289,12 @@ export default function ProfilePage() {
             showToast('Error al actualizar perfil', 'error');
           } else {
             showToast('¡Perfil actualizado!', 'success');
+            setEditModal(false);
           }
         });
+    } else {
+      setEditModal(false);
     }
-    
-    setEditModal(false);
   }
 
   function handleLogout() {
@@ -589,21 +612,9 @@ export default function ProfilePage() {
 
           <div>
             <label className="text-xs font-semibold text-[#B1A9E5] mb-1 block">Teléfono</label>
-            <input 
-              value={editPhone} 
-              onChange={e => {
-                const raw = e.target.value.replace(/\D/g, '').slice(0, 10);
-                let formatted = raw;
-                if (raw.length > 6) {
-                  formatted = `${raw.slice(0, 3)} ${raw.slice(3, 6)} ${raw.slice(6)}`;
-                } else if (raw.length > 3) {
-                  formatted = `${raw.slice(0, 3)} ${raw.slice(3)}`;
-                }
-                setEditPhone(formatted);
-              }}
-              type="tel"
-              placeholder="424 123 4567"
-              className="w-full px-3 py-2.5 rounded-inp border border-[#B1A9E5]/30 text-sm text-[#12173B] outline-none focus:border-[#7546ED] transition-all" 
+            <PhoneInput
+              value={editPhone}
+              onChange={setEditPhone}
             />
           </div>
           
