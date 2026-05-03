@@ -5,7 +5,6 @@ import { BusinessDataProvider } from './context/BusinessDataContext';
 import BottomNav from './components/BottomNav';
 import BusinessSidebar from './components/BusinessSidebar';
 import BusinessBottomNav from './components/BusinessBottomNav';
-import RoleSwitcher from './components/RoleSwitcher';
 import ToastContainer from './components/Toast';
 import { useEffect } from 'react';
 
@@ -31,9 +30,6 @@ import ScanPurchasePage from './pages/business/ScanPurchasePage';
 function CustomerLayout() {
   return (
     <div className="max-w-[430px] mx-auto min-h-screen bg-[#F4F3FB] relative">
-      <div className="px-5 pt-4 flex justify-end">
-        <RoleSwitcher />
-      </div>
       <Routes>
         <Route path="/home" element={<HomePage />} />
         <Route path="/cards" element={<CardsPage />} />

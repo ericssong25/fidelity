@@ -1,11 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Users, TrendingUp, Zap, Gift, AlertCircle, RefreshCw, DollarSign, ShoppingCart, Award, ArrowUpRight, CreditCard, ScanLine } from 'lucide-react';
+import { Users, TrendingUp, Zap, Gift, AlertCircle, RefreshCw, DollarSign, ShoppingCart, Award, ArrowUpRight, CreditCard } from 'lucide-react';
 import { useBusinessData } from '../../context/BusinessDataContext';
 import { supabase } from '../../lib/supabase';
 import RoleSwitcher from '../../components/RoleSwitcher';
-import QrScanner from '../../components/QrScanner';
 import { useApp } from '../../context/AppContext';
 
 interface Transaction {
@@ -30,12 +28,10 @@ interface DailyStat {
 export default function OverviewPage() {
   const { business, loyaltyCards, loading, error, refresh } = useBusinessData();
   const { showToast } = useApp();
-  const navigate = useNavigate();
   
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [redemptions, setRedemptions] = useState<Transaction[]>([]);
   const [dailyStats, setDailyStats] = useState<DailyStat[]>([]);
-  const [showScanner, setShowScanner] = useState(false);
   interface TopCustomer {
   id: string;
   name: string;
@@ -625,30 +621,6 @@ const [topCustomers, setTopCustomers] = useState<TopCustomer[]>([]);
           </div>
         )}
       </div>
-
-      {/* Floating Scan Button */}
-      <button
-        onClick={() => setShowScanner(true)}
-        className="fixed bottom-24 right-6 z-30 w-14 h-14 rounded-full bg-[#7546ED] text-white flex items-center justify-center shadow-lg hover:bg-[#6B3FD0] transition-colors shadow-[#7546ED]/30 shadow-xl"
-      >
-        <ScanLine size={22} />
-      </button>
-
-      {/* QR Scanner */}
-      {showScanner && (
-        <QrScanner
-          onScan={(url) => {
-            const match = url.match(/\/business\/scan\/([a-f0-9-]+)/i);
-            if (match) {
-              navigate(`/business/scan/${match[1]}`);
-            } else {
-              showToast('Código QR no válido', 'error');
-              setShowScanner(false);
-            }
-          }}
-          onClose={() => setShowScanner(false)}
-        />
-      )}
 
     </div>
   );
