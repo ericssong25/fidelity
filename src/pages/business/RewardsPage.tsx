@@ -348,11 +348,55 @@ export default function RewardsPage() {
       if (error) {
         console.error('Error updating redemption:', error);
         showToast('Error al actualizar canje', 'error');
-      } else {
-        setRedemptions(prev => prev.filter(r => r.id !== redemption.id));
-        showToast(action === 'claimed' ? '¡Canje completado!' : 'Canje cancelado', 
-          action === 'claimed' ? 'success' : 'error');
+        return;
       }
+
+      // If cancelled, refund points to the customer
+      if (action === 'expired') {
+        // Get current points from loyalty card
+        const { data: card, error: cardError } = await supabase
+          .from('loyalty_cards')
+          .select('current_points')
+          .eq('id', redemption.loyalty_card_id)
+          .single();
+
+        if (cardError) {
+          console.error('Error fetching loyalty card:', cardError);
+          showToast('Error al recuperar tarjeta de fidelidad', 'error');
+          return;
+        }
+
+        // Refund points to loyalty card
+        const { error: refundError } = await supabase
+          .from('loyalty_cards')
+          .update({
+            current_points: card.current_points + redemption.points_used,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', redemption.loyalty_card_id);
+
+        if (refundError) {
+          console.error('Error refunding points:', refundError);
+          showToast('Error al devolver puntos', 'error');
+          return;
+        }
+
+        // Record the point refund transaction
+        await supabase
+          .from('point_transactions')
+          .insert({
+            loyalty_card_id: redemption.loyalty_card_id,
+            type: 'adjusted',
+            points: redemption.points_used,
+            description: `Devolución: ${redemption.reward_name || 'Recompensa'} (canje cancelado)`,
+            reference_id: redemption.id,
+            reference_type: 'reward_redemption'
+          });
+      }
+
+      setRedemptions(prev => prev.filter(r => r.id !== redemption.id));
+      showToast(action === 'claimed' ? '¡Canje completado!' : 'Canje cancelado y puntos devueltos',
+        action === 'claimed' ? 'success' : 'error');
     } catch (err) {
       console.error('Error resolving redemption:', err);
       showToast('Failed to update redemption', 'error');

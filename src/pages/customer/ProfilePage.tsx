@@ -124,6 +124,32 @@ export default function ProfilePage() {
   const userCards = loyaltyCards || [];
   const totalPoints = userCards.reduce((acc, card) => acc + (card.current_points || 0), 0);
   
+  // Query total redemptions across all user cards
+  const { data: redemptionCount, loading: redemptionLoading } = useSupabaseQuery<number>(
+    async () => {
+      if (!user?.id) return { data: 0, error: null };
+      
+      const { data: cards } = await supabase
+        .from('loyalty_cards')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('is_active', true);
+      
+      const ids = cards?.map(c => c.id) || [];
+      if (ids.length === 0) return { data: 0, error: null };
+      
+      const { count, error } = await supabase
+        .from('reward_redemptions')
+        .select('*', { count: 'exact', head: true })
+        .in('loyalty_card_id', ids)
+        .eq('status', 'claimed');
+      
+      return { data: count || 0, error };
+    },
+    [user?.id],
+    { enabled: !!user?.id, timeout: 10000 }
+  );
+  
   // Query to check if user already owns a business
   const { data: userBusiness } = useSupabaseQuery(
     async () => {
@@ -290,7 +316,9 @@ export default function ProfilePage() {
               <span className="text-[#B1A9E5] text-[10px] text-center mt-0.5">Puntos totales</span>
             </div>
             <div className="flex flex-col items-center px-3">
-              <span className="text-[#7546ED] font-extrabold text-2xl">2</span>
+              <span className="text-[#7546ED] font-extrabold text-2xl">
+                {redemptionLoading ? '-' : (redemptionCount ?? 0)}
+              </span>
               <span className="text-[#B1A9E5] text-[10px] text-center mt-0.5">Recompensas canjeadas</span>
             </div>
           </div>
