@@ -74,14 +74,14 @@ export default function ProfilePage() {
           return { data: [], error: null };
         }
 
-        // Get business info separately
+        // Get business info separately (with loyalty_levels JSONB)
         const businessIds = cardsOnly.map(c => c.business_id).filter(Boolean);
-        const businessesMap: Record<string, { id: string; name: string; category: string }> = {};
+        const businessesMap: Record<string, { id: string; name: string; category: string; loyalty_levels?: { name: string; color: string }[] }> = {};
         
         if (businessIds.length > 0) {
           const { data: businesses } = await supabase
             .from('businesses')
-            .select('id, name, category')
+            .select('id, name, category, loyalty_levels')
             .in('id', businessIds);
           
           businesses?.forEach(b => {
@@ -89,26 +89,18 @@ export default function ProfilePage() {
           });
         }
 
-        // Get levels info separately
-        const levelIds = cardsOnly.map(c => c.current_level_id).filter(Boolean);
-        const levelsMap: Record<string, { id: string; name: string; color: string }> = {};
-        
-        if (levelIds.length > 0) {
-          const { data: levels } = await supabase
-            .from('loyalty_levels')
-            .select('id, name, color')
-            .in('id', levelIds);
-          
-          levels?.forEach(l => {
-            levelsMap[l.id] = l;
-          });
-        }
+        const data = cardsOnly.map(card => {
+          const biz = businessesMap[card.business_id];
+          const bizLevels = biz?.loyalty_levels as { name: string; color: string }[] | undefined;
+          const cardLevel = card.current_level || 'Bronze';
+          const levelData = bizLevels?.find(l => l.name === cardLevel);
 
-        const data = cardsOnly.map(card => ({
-          ...card,
-          businesses: businessesMap[card.business_id] ? [businessesMap[card.business_id]] : [],
-          loyalty_levels: levelsMap[card.current_level_id] ? [levelsMap[card.current_level_id]] : []
-        }));
+          return {
+            ...card,
+            businesses: biz ? [biz] : [],
+            loyalty_levels: levelData ? [{ id: cardLevel, name: levelData.name, color: levelData.color }] : []
+          };
+        });
 
         return { data, error: null };
       } catch (err: unknown) {

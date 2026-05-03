@@ -93,18 +93,13 @@ export default function CardDetailPage() {
           setBusiness(biz);
         }
         
-        // Get loyalty level (may not exist)
-        if (card.current_level_id) {
-          try {
-            const { data: lvl } = await supabase
-              .from('loyalty_levels')
-              .select('*')
-              .eq('id', card.current_level_id)
-              .single();
-            setLevel(lvl);
-          } catch {
-            console.log('Level not found or table does not exist');
-          }
+        // Get loyalty level from businesses.loyalty_levels JSONB
+        const bizLevelsData = (biz as Record<string, unknown> | null)?.loyalty_levels as Array<{
+          name: string; color: string;
+        }> | undefined;
+        if (bizLevelsData && Array.isArray(bizLevelsData) && card.current_level) {
+          const found = bizLevelsData.find(l => l.name === card.current_level);
+          if (found) setLevel(found);
         }
         
         // Get all levels for this business (for progress bar)
@@ -116,24 +111,11 @@ export default function CardDetailPage() {
         if (bizLevels && Array.isArray(bizLevels) && bizLevels.length > 0) {
           setLevels(bizLevels);
         } else {
-          try {
-            const { data: lvls } = await supabase
-              .from('loyalty_levels')
-              .select('*')
-              .eq('business_id', businessId)
-              .order('min_points', { ascending: true });
-            setLevels(lvls && lvls.length > 0 ? lvls : [
-              { name: 'Bronze', min_points: 0, color: '#CD7F32' },
-              { name: 'Silver', min_points: 500, color: '#C0C0C0' },
-              { name: 'Gold', min_points: 1000, color: '#FFD700' }
-            ]);
-          } catch {
-            setLevels([
-              { name: 'Bronze', min_points: 0, color: '#CD7F32' },
-              { name: 'Silver', min_points: 500, color: '#C0C0C0' },
-              { name: 'Gold', min_points: 1000, color: '#FFD700' }
-            ]);
-          }
+          setLevels([
+            { name: 'Bronze', min_points: 0, color: '#CD7F32' },
+            { name: 'Silver', min_points: 500, color: '#C0C0C0' },
+            { name: 'Gold', min_points: 1000, color: '#FFD700' }
+          ]);
         }
         
         // Get transactions

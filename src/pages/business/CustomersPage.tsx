@@ -65,25 +65,26 @@ export default function CustomersPage() {
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [existingCardUserIds, setExistingCardUserIds] = useState<Set<string>>(new Set());
 
-  // Fetch level names when business changes
+  // Fetch level names from business.loyalty_levels JSONB
   useEffect(() => {
-    if (!business?.id) return;
+    if (!business) return;
 
-    supabase
-      .from('loyalty_levels')
-      .select('id, name')
-      .eq('business_id', business.id)
-      .then(({ data }) => {
-        const map: Record<string, Level> = {};
-        data?.forEach((l: { id: string; name: string }) => {
-          const name = l.name as Level;
-          if (name === 'Bronze' || name === 'Silver' || name === 'Gold') {
-            map[l.id] = name;
-          }
-        });
-        setLevelNames(map);
+    const loyaltyLevels = (business as unknown as Record<string, unknown> | null)?.loyalty_levels as Array<{
+      name: string; color?: string;
+    }> | undefined;
+
+    if (loyaltyLevels && Array.isArray(loyaltyLevels) && loyaltyLevels.length > 0) {
+      const map: Record<string, Level> = {};
+      loyaltyLevels.forEach((l, i) => {
+        const name = l.name as Level;
+        if (name === 'Bronze' || name === 'Silver' || name === 'Gold') {
+          // Use array index as the level ID for simplicity
+          map[String(i)] = name;
+        }
       });
-  }, [business?.id]);
+      setLevelNames(map);
+    }
+  }, [business]);
 
   // Track which users already have cards (for search results indicator)
   useEffect(() => {

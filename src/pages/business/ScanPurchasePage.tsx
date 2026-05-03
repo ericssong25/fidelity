@@ -63,7 +63,7 @@ export default function ScanPurchasePage() {
         // Load loyalty card
         const { data: card, error: cardError } = await supabase
           .from('loyalty_cards')
-          .select('id, user_id, business_id, current_points, total_visits, current_level_id')
+          .select('id, user_id, business_id, current_points, total_visits, current_level_id, current_level')
           .eq('id', cardId)
           .maybeSingle();
 
@@ -97,20 +97,8 @@ export default function ScanPurchasePage() {
           console.error('Profile load error:', profileError);
         }
 
-        // Load level info if exists
-        let levelName = 'Bronze';
-        try {
-          if (card.current_level_id) {
-            const { data: lvl } = await supabase
-              .from('loyalty_levels')
-              .select('name')
-              .eq('id', card.current_level_id)
-              .maybeSingle();
-            if (lvl?.name) levelName = lvl.name;
-          }
-        } catch {
-          // Level table may not exist, use default
-        }
+        // Use current_level from card (set by level_up trigger)
+        const levelName = card.current_level || 'Bronze';
 
         const name = profile?.name || 'Cliente';
         const initials = name

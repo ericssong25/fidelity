@@ -3,6 +3,7 @@
 -- ============================================================================
 -- Ejecutar en el SQL Editor de Supabase, en orden.
 -- PRIMERO: Correcciones de schema, LUEGO: Triggers.
+-- IMPORTANTE: Este script usa businesses.loyalty_levels (JSONB), NO la tabla loyalty_levels.
 -- ============================================================================
 
 -- ============================================================================
@@ -18,8 +19,7 @@ ALTER TABLE notifications DROP CONSTRAINT IF EXISTS notifications_type_check;
 ALTER TABLE notifications ADD CONSTRAINT notifications_type_check
   CHECK (type IN ('level_up', 'points_earned', 'reward_unlocked', 'promotion', 'general'));
 
--- 1.3 Actualizar la función check_level_upgrade para usar los nuevos tipos
---     (la reemplazamos más abajo como trigger, pero por si acaso)
+-- 1.3 Eliminar función obsoleta
 DROP FUNCTION IF EXISTS check_level_upgrade(UUID);
 
 
@@ -29,13 +29,17 @@ DROP FUNCTION IF EXISTS check_level_upgrade(UUID);
 
 -- --------------------------------------------------------------------------
 -- 2.1  TRIGGER: Subida de nivel (level_up)
---      Se dispara cuando total_points_earned cambia en loyalty_cards.
---      Recalcula current_level y, si subió, inserta notificación.
+--      Lee businesses.loyalty_levels JSONB.
 -- --------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION trg_level_up_fn()
 RETURNS TRIGGER AS $$
 DECLARE
-  v_new_level RECORD;
+  v_new_name       TEXT;
+  v_new_color      TEXT;
+  v_new_mult       NUMERIC;
+  v_new_disc       INTEGER;
+  v_new_perks      JSONB;
+  v_new_min_pts    INTEGER;
   v_old_level_name TEXT;
 BEGIN
   -- Solo proceder si total_points_earned cambió
@@ -43,50 +47,53 @@ BEGIN
     RETURN NEW;
   END IF;
 
-  -- Buscar el nivel más alto que califica (basado en total_points_earned)
-  SELECT id, name, color, multiplier, discount_percent, perks, min_points
-  INTO v_new_level
-  FROM loyalty_levels
-  WHERE business_id = NEW.business_id
-    AND min_points <= NEW.total_points_earned
-  ORDER BY min_points DESC
+  -- Buscar nivel más alto desde businesses.loyalty_levels JSONB
+  SELECT
+    ld->>'name'              AS name,
+    ld->>'color'             AS color,
+    (ld->>'min_points')::int AS min_points,
+    (ld->>'multiplier')::numeric AS multiplier,
+    (ld->>'discount_percent')::int AS discount_percent,
+    ld->'perks'              AS perks
+  INTO v_new_name, v_new_color, v_new_min_pts, v_new_mult, v_new_disc, v_new_perks
+  FROM businesses b,
+       LATERAL jsonb_array_elements(b.loyalty_levels) AS ld
+  WHERE b.id = NEW.business_id
+    AND (ld->>'min_points')::int <= NEW.total_points_earned
+  ORDER BY (ld->>'min_points')::int DESC
   LIMIT 1;
 
   -- Si no hay niveles configurados, salir
-  IF NOT FOUND THEN
+  IF v_new_name IS NULL THEN
     RETURN NEW;
   END IF;
 
-  -- Nombre del nivel anterior (si tenía)
-  SELECT name INTO v_old_level_name
-  FROM loyalty_levels
-  WHERE id = OLD.current_level_id;
-
-  -- Si subió de nivel (o es la primera vez)
-  IF v_new_level.id IS DISTINCT FROM OLD.current_level_id THEN
-    -- Actualizar current_level en la tarjeta
-    NEW.current_level_id := v_new_level.id;
-    NEW.current_level := v_new_level.name;
-    NEW.updated_at := now();
-
-    -- Insertar notificación
-    INSERT INTO notifications (user_id, business_id, type, title, message, metadata)
-    VALUES (
-      NEW.user_id,
-      NEW.business_id,
-      'level_up',
-      '¡Subiste a ' || v_new_level.name || '!',
-      'Felicitaciones, alcanzaste el nivel ' || v_new_level.name || '.',
-      jsonb_build_object(
-        'level_name', v_new_level.name,
-        'color', v_new_level.color,
-        'multiplier', v_new_level.multiplier,
-        'discount_percent', v_new_level.discount_percent,
-        'perks', v_new_level.perks,
-        'min_points', v_new_level.min_points
-      )
-    );
+  -- Si ya está en ese nivel, salir
+  IF NEW.current_level = v_new_name THEN
+    RETURN NEW;
   END IF;
+
+  -- Actualizar current_level
+  NEW.current_level := v_new_name;
+  NEW.updated_at := now();
+
+  -- Insertar notificación
+  INSERT INTO notifications (user_id, business_id, type, title, message, metadata)
+  VALUES (
+    NEW.user_id,
+    NEW.business_id,
+    'level_up',
+    '¡Subiste a ' || v_new_name || '!',
+    'Felicitaciones, alcanzaste el nivel ' || v_new_name || '.',
+    jsonb_build_object(
+      'level_name', v_new_name,
+      'color', v_new_color,
+      'multiplier', v_new_mult,
+      'discount_percent', v_new_disc,
+      'perks', v_new_perks,
+      'min_points', v_new_min_pts
+    )
+  );
 
   RETURN NEW;
 END;
@@ -101,7 +108,6 @@ CREATE TRIGGER trg_level_up
 
 -- --------------------------------------------------------------------------
 -- 2.2  TRIGGER: Puntos ganados (points_earned)
---      Se dispara al insertar una transacción de tipo 'earned'.
 -- --------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION trg_points_earned_fn()
 RETURNS TRIGGER AS $$
@@ -110,38 +116,23 @@ DECLARE
   v_business_id UUID;
   v_business_name TEXT;
 BEGIN
-  -- Solo para transacciones de tipo 'earned'
   IF NEW.type <> 'earned' THEN
     RETURN NEW;
   END IF;
 
-  -- Obtener datos de la tarjeta
   SELECT lc.user_id, lc.business_id INTO v_user_id, v_business_id
-  FROM loyalty_cards lc
-  WHERE lc.id = NEW.loyalty_card_id;
+  FROM loyalty_cards lc WHERE lc.id = NEW.loyalty_card_id;
 
-  IF NOT FOUND THEN
-    RETURN NEW;
-  END IF;
+  IF NOT FOUND THEN RETURN NEW; END IF;
 
-  -- Obtener nombre del negocio
-  SELECT name INTO v_business_name
-  FROM businesses
-  WHERE id = v_business_id;
+  SELECT name INTO v_business_name FROM businesses WHERE id = v_business_id;
 
-  -- Insertar notificación
   INSERT INTO notifications (user_id, business_id, type, title, message, metadata)
   VALUES (
-    v_user_id,
-    v_business_id,
-    'points_earned',
+    v_user_id, v_business_id, 'points_earned',
     '¡Puntos ganados!',
     'Ganaste +' || NEW.points || ' puntos en ' || COALESCE(v_business_name, 'un negocio') || '.',
-    jsonb_build_object(
-      'points', NEW.points,
-      'business_name', v_business_name,
-      'description', NEW.description
-    )
+    jsonb_build_object('points', NEW.points, 'business_name', v_business_name, 'description', NEW.description)
   );
 
   RETURN NEW;
@@ -156,31 +147,21 @@ CREATE TRIGGER trg_points_earned
 
 
 -- --------------------------------------------------------------------------
--- 2.3  TRIGGER: Tarjeta de lealtad creada (general)
---      Se dispara al crear una loyalty_card.
+-- 2.3  TRIGGER: Tarjeta de lealtad creada
 -- --------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION trg_card_created_fn()
 RETURNS TRIGGER AS $$
 DECLARE
   v_business_name TEXT;
 BEGIN
-  -- Obtener nombre del negocio
-  SELECT name INTO v_business_name
-  FROM businesses
-  WHERE id = NEW.business_id;
+  SELECT name INTO v_business_name FROM businesses WHERE id = NEW.business_id;
 
-  -- Insertar notificación
   INSERT INTO notifications (user_id, business_id, type, title, message, metadata)
   VALUES (
-    NEW.user_id,
-    NEW.business_id,
-    'general',
+    NEW.user_id, NEW.business_id, 'general',
     '¡Nueva tarjeta de lealtad!',
-    COALESCE(v_business_name, 'Un negocio') || ' te ha creado una tarjeta de lealtad. ¡Empezá a acumular puntos!',
-    jsonb_build_object(
-      'business_name', v_business_name,
-      'card_number', NEW.card_number
-    )
+    COALESCE(v_business_name, 'Un negocio') || ' te ha creado una tarjeta de lealtad.',
+    jsonb_build_object('business_name', v_business_name, 'card_number', NEW.card_number)
   );
 
   RETURN NEW;
@@ -195,68 +176,40 @@ CREATE TRIGGER trg_card_created
 
 
 -- --------------------------------------------------------------------------
--- 2.4  TRIGGER: Recompensa canjeada (reward_unlocked + general al dueño)
---      Se dispara al insertar un reward_redemption.
+-- 2.4  TRIGGER: Recompensa canjeada
 -- --------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION trg_reward_redeemed_fn()
 RETURNS TRIGGER AS $$
 DECLARE
-  v_user_id UUID;
-  v_business_id UUID;
-  v_business_owner_id UUID;
+  v_user_id       UUID;
+  v_business_id   UUID;
+  v_owner_id      UUID;
   v_business_name TEXT;
-  v_reward_name TEXT;
-  v_points_used INTEGER;
+  v_reward_name   TEXT;
 BEGIN
-  -- Obtener datos relacionados: tarjeta → usuario y negocio
   SELECT lc.user_id, lc.business_id INTO v_user_id, v_business_id
-  FROM loyalty_cards lc
-  WHERE lc.id = NEW.loyalty_card_id;
+  FROM loyalty_cards lc WHERE lc.id = NEW.loyalty_card_id;
 
-  v_points_used := NEW.points_used;
+  SELECT name INTO v_reward_name FROM rewards WHERE id = NEW.reward_id;
+  SELECT name, owner_id INTO v_business_name, v_owner_id FROM businesses WHERE id = v_business_id;
 
-  -- Nombre del reward
-  SELECT name INTO v_reward_name
-  FROM rewards
-  WHERE id = NEW.reward_id;
-
-  -- Nombre y dueño del negocio
-  SELECT name, owner_id INTO v_business_name, v_business_owner_id
-  FROM businesses
-  WHERE id = v_business_id;
-
-  -- a) Notificar al cliente
+  -- a) Cliente
   INSERT INTO notifications (user_id, business_id, type, title, message, metadata)
   VALUES (
-    v_user_id,
-    v_business_id,
-    'reward_unlocked',
+    v_user_id, v_business_id, 'reward_unlocked',
     '¡Recompensa canjeada!',
-    'Canjeaste ' || COALESCE(v_reward_name, 'una recompensa') || ' por ' || v_points_used || ' puntos en ' || COALESCE(v_business_name, 'un negocio') || '.',
-    jsonb_build_object(
-      'reward_name', v_reward_name,
-      'points_used', v_points_used,
-      'business_name', v_business_name,
-      'redemption_code', NEW.redemption_code,
-      'status', NEW.status
-    )
+    'Canjeaste ' || COALESCE(v_reward_name, 'una recompensa') || ' por ' || NEW.points_used || ' puntos en ' || COALESCE(v_business_name, 'un negocio') || '.',
+    jsonb_build_object('reward_name', v_reward_name, 'points_used', NEW.points_used, 'business_name', v_business_name, 'redemption_code', NEW.redemption_code, 'status', NEW.status)
   );
 
-  -- b) Notificar al dueño del negocio (si existe y es distinto del cliente)
-  IF v_business_owner_id IS NOT NULL AND v_business_owner_id <> v_user_id THEN
+  -- b) Dueño
+  IF v_owner_id IS NOT NULL AND v_owner_id <> v_user_id THEN
     INSERT INTO notifications (user_id, business_id, type, title, message, metadata)
     VALUES (
-      v_business_owner_id,
-      v_business_id,
-      'general',
+      v_owner_id, v_business_id, 'general',
       'Nuevo canje pendiente',
-      'Un cliente canjeó ' || COALESCE(v_reward_name, 'una recompensa') || '. Código: ' || NEW.redemption_code || '. Validá el canje en Recompensas.',
-      jsonb_build_object(
-        'reward_name', v_reward_name,
-        'points_used', v_points_used,
-        'redemption_code', NEW.redemption_code,
-        'status', 'pending'
-      )
+      'Un cliente canjeó ' || COALESCE(v_reward_name, 'una recompensa') || '. Código: ' || NEW.redemption_code || '.',
+      jsonb_build_object('reward_name', v_reward_name, 'points_used', NEW.points_used, 'redemption_code', NEW.redemption_code, 'status', 'pending')
     );
   END IF;
 
@@ -272,67 +225,40 @@ CREATE TRIGGER trg_reward_redeemed
 
 
 -- --------------------------------------------------------------------------
--- 2.5  TRIGGER: Canje resuelto (completado o cancelado)
---      Se dispara al cambiar el status de un reward_redemption.
+-- 2.5  TRIGGER: Canje resuelto
 -- --------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION trg_redemption_resolved_fn()
 RETURNS TRIGGER AS $$
 DECLARE
-  v_user_id UUID;
-  v_business_id UUID;
+  v_user_id       UUID;
+  v_business_id   UUID;
   v_business_name TEXT;
-  v_reward_name TEXT;
-  v_points_used INTEGER;
+  v_reward_name   TEXT;
 BEGIN
-  -- Solo disparar si el status realmente cambió
-  IF NEW.status IS NOT DISTINCT FROM OLD.status THEN
-    RETURN NEW;
-  END IF;
+  IF NEW.status IS NOT DISTINCT FROM OLD.status THEN RETURN NEW; END IF;
+  IF NEW.status NOT IN ('claimed', 'expired') THEN RETURN NEW; END IF;
 
-  -- Solo para claimed y expired
-  IF NEW.status NOT IN ('claimed', 'expired') THEN
-    RETURN NEW;
-  END IF;
-
-  -- Obtener datos
   SELECT lc.user_id, lc.business_id INTO v_user_id, v_business_id
-  FROM loyalty_cards lc
-  WHERE lc.id = NEW.loyalty_card_id;
+  FROM loyalty_cards lc WHERE lc.id = NEW.loyalty_card_id;
 
   SELECT name INTO v_reward_name FROM rewards WHERE id = NEW.reward_id;
   SELECT name INTO v_business_name FROM businesses WHERE id = v_business_id;
-  v_points_used := NEW.points_used;
 
   IF NEW.status = 'claimed' THEN
-    -- Canje completado
     INSERT INTO notifications (user_id, business_id, type, title, message, metadata)
     VALUES (
-      v_user_id,
-      v_business_id,
-      'reward_unlocked',
+      v_user_id, v_business_id, 'reward_unlocked',
       '¡Canje completado!',
-      'Tu canje de ' || COALESCE(v_reward_name, 'una recompensa') || ' fue validado por ' || COALESCE(v_business_name, 'el negocio') || '. ¡Disfrutá tu recompensa!',
-      jsonb_build_object(
-        'reward_name', v_reward_name,
-        'business_name', v_business_name,
-        'status', 'claimed'
-      )
+      'Tu canje de ' || COALESCE(v_reward_name, 'una recompensa') || ' fue validado por ' || COALESCE(v_business_name, 'el negocio') || '.',
+      jsonb_build_object('reward_name', v_reward_name, 'business_name', v_business_name, 'status', 'claimed')
     );
   ELSE
-    -- Canje cancelado / expirado — puntos devueltos
     INSERT INTO notifications (user_id, business_id, type, title, message, metadata)
     VALUES (
-      v_user_id,
-      v_business_id,
-      'general',
+      v_user_id, v_business_id, 'general',
       'Canje cancelado — puntos devueltos',
-      'Tu canje de ' || COALESCE(v_reward_name, 'una recompensa') || ' fue cancelado. Se devolvieron ' || v_points_used || ' puntos a tu cuenta.',
-      jsonb_build_object(
-        'reward_name', v_reward_name,
-        'points_used', v_points_used,
-        'business_name', v_business_name,
-        'status', 'expired'
-      )
+      'Tu canje de ' || COALESCE(v_reward_name, 'una recompensa') || ' fue cancelado. Se devolvieron ' || NEW.points_used || ' puntos.',
+      jsonb_build_object('reward_name', v_reward_name, 'points_used', NEW.points_used, 'business_name', v_business_name, 'status', 'expired')
     );
   END IF;
 
@@ -348,28 +274,20 @@ CREATE TRIGGER trg_redemption_resolved
 
 
 -- --------------------------------------------------------------------------
--- 2.6  TRIGGER: Negocio aprobado (general)
---      Se dispara cuando el status de un negocio cambia a 'active'.
+-- 2.6  TRIGGER: Negocio aprobado
 -- --------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION trg_business_approved_fn()
 RETURNS TRIGGER AS $$
 BEGIN
-  -- Solo disparar si pasó de 'pending' a 'active'
   IF OLD.status = 'pending' AND NEW.status = 'active' THEN
     INSERT INTO notifications (user_id, business_id, type, title, message, metadata)
     VALUES (
-      NEW.owner_id,
-      NEW.id,
-      'general',
+      NEW.owner_id, NEW.id, 'general',
       '¡Negocio aprobado!',
-      'Tu negocio ' || NEW.name || ' ha sido aprobado. Ya podés acceder al panel de negocio y gestionar tu programa de lealtad.',
-      jsonb_build_object(
-        'business_name', NEW.name,
-        'business_id', NEW.id
-      )
+      'Tu negocio ' || NEW.name || ' ha sido aprobado. Ya podés gestionar tu programa de lealtad.',
+      jsonb_build_object('business_name', NEW.name, 'business_id', NEW.id)
     );
   END IF;
-
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -383,25 +301,21 @@ CREATE TRIGGER trg_business_approved
 
 -- ============================================================================
 -- FASE 3 — TRIGGER DE MULTIPLICADOR DE PUNTOS
+--      Lee businesses.loyalty_levels JSONB.
 -- ============================================================================
-
--- --------------------------------------------------------------------------
--- 3.1  TRIGGER: apply_points_multiplier
---      Antes de insertar una compra, multiplica total_points según
---      el multiplicador del nivel actual del cliente.
--- --------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION trg_apply_multiplier_fn()
 RETURNS TRIGGER AS $$
 DECLARE
   v_multiplier NUMERIC;
 BEGIN
-  -- Buscar el multiplicador del nivel actual de la tarjeta
-  SELECT ll.multiplier INTO v_multiplier
+  SELECT (ld->>'multiplier')::numeric INTO v_multiplier
   FROM loyalty_cards lc
-  JOIN loyalty_levels ll ON ll.id = lc.current_level_id
-  WHERE lc.id = NEW.loyalty_card_id;
+  JOIN businesses b ON b.id = lc.business_id,
+       LATERAL jsonb_array_elements(b.loyalty_levels) AS ld
+  WHERE lc.id = NEW.loyalty_card_id
+    AND ld->>'name' = lc.current_level
+  LIMIT 1;
 
-  -- Si encontró el multiplicador y es > 1, aplicarlo
   IF FOUND AND v_multiplier IS NOT NULL AND v_multiplier > 1 THEN
     NEW.total_points := ROUND(NEW.total_points * v_multiplier);
   END IF;
@@ -418,30 +332,17 @@ CREATE TRIGGER trg_apply_multiplier
 
 
 -- ============================================================================
--- FASE 4 — ÍNDICES ADICIONALES (si no existen)
+-- FASE 4 — ÍNDICES
 -- ============================================================================
 CREATE INDEX IF NOT EXISTS idx_notifications_user_unread
   ON notifications(user_id, is_read)
   WHERE is_read = false;
 
-CREATE INDEX IF NOT EXISTS idx_loyalty_cards_business_level
-  ON loyalty_cards(business_id, current_level);
-
 
 -- ============================================================================
--- VERIFICACIÓN FINAL
+-- VERIFICACIÓN
 -- ============================================================================
--- Confirmar triggers creados:
---   SELECT trigger_name, event_manipulation, event_object_table
---   FROM information_schema.triggers
---   WHERE trigger_name LIKE 'trg_%'
---   ORDER BY event_object_table;
---
--- Confirmar columna renombrada:
---   SELECT column_name, data_type FROM information_schema.columns
---   WHERE table_name = 'notifications' AND column_name IN ('metadata', 'data');
---
--- Confirmar constraint actualizado:
---   SELECT conname, consrc FROM pg_constraint
---   WHERE conrelid = 'notifications'::regclass AND contype = 'c';
--- ============================================================================
+-- SELECT trigger_name, event_manipulation, event_object_table
+-- FROM information_schema.triggers
+-- WHERE trigger_name LIKE 'trg_%'
+-- ORDER BY event_object_table;
