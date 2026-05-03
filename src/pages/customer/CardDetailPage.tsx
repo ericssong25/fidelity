@@ -107,25 +107,33 @@ export default function CardDetailPage() {
           }
         }
         
-        // Get all levels for this business (for progress bar) - may not exist
-        try {
-          const { data: lvls } = await supabase
-            .from('loyalty_levels')
-            .select('*')
-            .eq('business_id', businessId)
-            .order('min_points', { ascending: true });
-          setLevels(lvls && lvls.length > 0 ? lvls : [
-            { name: 'Bronze', min_points: 0 },
-            { name: 'Silver', min_points: 500 },
-            { name: 'Gold', min_points: 1000 }
-          ]);
-        } catch {
-          // Table doesn't exist, use defaults
-          setLevels([
-            { name: 'Bronze', min_points: 0 },
-            { name: 'Silver', min_points: 500 },
-            { name: 'Gold', min_points: 1000 }
-          ]);
+        // Get all levels for this business (for progress bar)
+        // Priority: businesses.loyalty_levels JSONB → loyalty_levels table → defaults
+        const bizLevels = (biz as Record<string, unknown> | null)?.loyalty_levels as Array<{
+          name: string; min_points: number; color: string;
+        }> | undefined;
+
+        if (bizLevels && Array.isArray(bizLevels) && bizLevels.length > 0) {
+          setLevels(bizLevels);
+        } else {
+          try {
+            const { data: lvls } = await supabase
+              .from('loyalty_levels')
+              .select('*')
+              .eq('business_id', businessId)
+              .order('min_points', { ascending: true });
+            setLevels(lvls && lvls.length > 0 ? lvls : [
+              { name: 'Bronze', min_points: 0, color: '#CD7F32' },
+              { name: 'Silver', min_points: 500, color: '#C0C0C0' },
+              { name: 'Gold', min_points: 1000, color: '#FFD700' }
+            ]);
+          } catch {
+            setLevels([
+              { name: 'Bronze', min_points: 0, color: '#CD7F32' },
+              { name: 'Silver', min_points: 500, color: '#C0C0C0' },
+              { name: 'Gold', min_points: 1000, color: '#FFD700' }
+            ]);
+          }
         }
         
         // Get transactions

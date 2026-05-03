@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { TrendingUp, ShoppingCart, Gift, Zap } from 'lucide-react';
+import { ShoppingCart, Gift } from 'lucide-react';
 import RoleSwitcher from '../../components/RoleSwitcher';
 import LoyaltyCard from '../../components/LoyaltyCard';
 import { sofia } from '../../data/mockData';
@@ -43,13 +43,6 @@ interface RedemptionHistory {
   status: 'pending' | 'claimed' | 'expired';
   business_name: string;
   created_at: string;
-}
-
-interface ActivityStats {
-  total_purchases: number;
-  total_points_earned: number;
-  total_redemptions: number;
-  total_points_redeemed: number;
 }
 
 export default function HomePage() {
@@ -131,57 +124,6 @@ export default function HomePage() {
   );
   
   const userCards = loyaltyCards || [];
-
-  // Activity Stats Query
-  const { data: activityStats, loading: statsLoading } = useSupabaseQuery<ActivityStats>(
-    async () => {
-      if (!user?.id) return { data: { total_purchases: 0, total_points_earned: 0, total_redemptions: 0, total_points_redeemed: 0 }, error: null };
-
-      try {
-        const { data: cards } = await supabase
-          .from('loyalty_cards')
-          .select('id')
-          .eq('user_id', user.id);
-
-        const cardIds = cards?.map(c => c.id) || [];
-        if (cardIds.length === 0) {
-          return { data: { total_purchases: 0, total_points_earned: 0, total_redemptions: 0, total_points_redeemed: 0 }, error: null };
-        }
-
-        const [purchasesRes, redemptionsRes] = await Promise.all([
-          supabase
-            .from('point_transactions')
-            .select('points')
-            .in('loyalty_card_id', cardIds)
-            .eq('type', 'earned'),
-          supabase
-            .from('reward_redemptions')
-            .select('points_used')
-            .in('loyalty_card_id', cardIds),
-        ]);
-
-        const totalPurchases = purchasesRes.data?.length || 0;
-        const totalPointsEarned = purchasesRes.data?.reduce((sum, tx) => sum + (tx.points || 0), 0) || 0;
-        const totalRedemptions = redemptionsRes.data?.length || 0;
-        const totalPointsRedeemed = redemptionsRes.data?.reduce((sum, tx) => sum + (tx.points_used || 0), 0) || 0;
-
-        return {
-          data: {
-            total_purchases: totalPurchases,
-            total_points_earned: totalPointsEarned,
-            total_redemptions: totalRedemptions,
-            total_points_redeemed: totalPointsRedeemed,
-          },
-          error: null
-        };
-      } catch (err: unknown) {
-        console.error('Error loading activity stats:', err);
-        return { data: { total_purchases: 0, total_points_earned: 0, total_redemptions: 0, total_points_redeemed: 0 }, error: err };
-      }
-    },
-    [user?.id],
-    { enabled: !!user?.id, timeout: 15000 }
-  );
 
   // Recent Purchases Query
   const { data: recentPurchases, loading: purchasesLoading } = useSupabaseQuery<PurchaseHistory[]>(
@@ -330,25 +272,8 @@ export default function HomePage() {
     { enabled: !!user?.id, timeout: 15000 }
   );
 
-  const stats = activityStats || { total_purchases: 0, total_points_earned: 0, total_redemptions: 0, total_points_redeemed: 0 };
   const purchases = recentPurchases || [];
   const redemptions = recentRedemptions || [];
-
-  // Unused variables - commented out since sections are hidden
-  // const allNews = businesses.flatMap(b =>
-  //   b.news.map(n => ({ ...n, businessName: b.name, businessId: b.id }))
-  // ).sort(() => Math.random() - 0.5).slice(0, 6);
-
-  // const allPromos = businesses.flatMap(b =>
-  //   b.promotions.map(p => ({ ...p, businessName: b.name, businessId: b.id }))
-  // );
-
-  // const dotColors: Record<string, string> = {
-  //   moka: '#7546ED',
-  //   epico: '#032C7D',
-  //   fortuna: '#10B981',
-  //   inboga: '#DC89FF',
-  // };
 
   return (
     <div className="min-h-screen bg-[#F4F3FB] pb-24">
@@ -417,62 +342,6 @@ export default function HomePage() {
                 );
               })
             )}
-          </div>
-        </section>
-
-        {/* Activity Summary */}
-        <section className="mb-8">
-          <h2 className="font-bold text-[#12173B] text-base mb-3 flex items-center gap-2">
-            <TrendingUp size={16} className="text-[#7546ED]" />
-            Resumen de Actividad
-          </h2>
-          <div className="bg-white rounded-2xl p-4 shadow-sm border border-[#B1A9E5]/10">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="bg-[#F4F3FB] rounded-xl p-3 flex items-center gap-3" style={{ borderLeft: '3px solid #7546ED' }}>
-                <ShoppingCart size={20} style={{ color: '#7546ED' }} />
-                <div>
-                  <div className="text-lg font-extrabold text-[#12173B]">{statsLoading ? (
-                    <div className="w-8 h-5 bg-[#B1A9E5]/20 rounded animate-pulse"></div>
-                  ) : (
-                    stats.total_purchases
-                  )}</div>
-                  <div className="text-[#B1A9E5] text-xs font-medium">Compras</div>
-                </div>
-              </div>
-              <div className="bg-[#F4F3FB] rounded-xl p-3 flex items-center gap-3" style={{ borderLeft: '3px solid #10B981' }}>
-                <Zap size={20} style={{ color: '#10B981' }} />
-                <div>
-                  <div className="text-lg font-extrabold text-[#12173B]">{statsLoading ? (
-                    <div className="w-12 h-5 bg-[#B1A9E5]/20 rounded animate-pulse"></div>
-                  ) : (
-                    `+${stats.total_points_earned}`
-                  )}</div>
-                  <div className="text-[#B1A9E5] text-xs font-medium">Puntos ganados</div>
-                </div>
-              </div>
-              <div className="bg-[#F4F3FB] rounded-xl p-3 flex items-center gap-3" style={{ borderLeft: '3px solid #DC89FF' }}>
-                <Gift size={20} style={{ color: '#DC89FF' }} />
-                <div>
-                  <div className="text-lg font-extrabold text-[#12173B]">{statsLoading ? (
-                    <div className="w-8 h-5 bg-[#B1A9E5]/20 rounded animate-pulse"></div>
-                  ) : (
-                    stats.total_redemptions
-                  )}</div>
-                  <div className="text-[#B1A9E5] text-xs font-medium">Canjes</div>
-                </div>
-              </div>
-              <div className="bg-[#F4F3FB] rounded-xl p-3 flex items-center gap-3" style={{ borderLeft: '3px solid #F59E0B' }}>
-                <TrendingUp size={20} style={{ color: '#F59E0B' }} />
-                <div>
-                  <div className="text-lg font-extrabold text-[#12173B]">{statsLoading ? (
-                    <div className="w-12 h-5 bg-[#B1A9E5]/20 rounded animate-pulse"></div>
-                  ) : (
-                    stats.total_points_redeemed.toLocaleString()
-                  )}</div>
-                  <div className="text-[#B1A9E5] text-xs font-medium">Puntos canjeados</div>
-                </div>
-              </div>
-            </div>
           </div>
         </section>
 
@@ -638,51 +507,6 @@ export default function HomePage() {
             </div>
           )}
         </section>
-
-        {/* What's New - Hidden */}
-        {/* <section className="mb-8">
-          <h2 className="font-bold text-[#12173B] text-base mb-3">What's New</h2>
-          <div className="space-y-3">
-            {allNews.map(news => (
-              <div
-                key={`${news.businessId}-${news.id}`}
-                className="bg-white rounded-2xl p-4 shadow-sm border border-[#B1A9E5]/10"
-              >
-                <div className="flex items-center gap-2 mb-1.5">
-                  <div
-                    className="w-2 h-2 rounded-full flex-shrink-0"
-                    style={{ background: dotColors[news.businessId] ?? '#7546ED' }}
-                  />
-                  <span className="text-xs text-[#B1A9E5] font-medium">{news.businessName}</span>
-                  <span className="text-xs text-[#B1A9E5] ml-auto">{news.date}</span>
-                </div>
-                <p className="font-bold text-[#12173B] text-sm leading-snug">{news.title}</p>
-                <p className="text-[#B1A9E5] text-xs mt-1 line-clamp-2">{news.excerpt}</p>
-              </div>
-            ))}
-          </div>
-        </section> */}
-
-        {/* Active Promotions - Hidden */}
-        {/* <section className="mb-8">
-          <h2 className="font-bold text-[#12173B] text-base mb-3">Active Promotions</h2>
-          <div className="flex gap-3 overflow-x-auto pb-2 -mx-5 px-5 scrollbar-hide">
-            {allPromos.map(promo => (
-              <div
-                key={`${promo.businessId}-${promo.id}`}
-                className="flex-shrink-0 w-52 rounded-2xl p-4 text-white"
-                style={{ background: 'linear-gradient(135deg, #DC89FF, #7546ED)' }}
-              >
-                <div className="inline-block bg-white/20 backdrop-blur-sm px-2 py-0.5 rounded-full text-xs font-bold mb-2">
-                  {promo.discount}
-                </div>
-                <p className="text-xs text-white/70 font-medium">{promo.businessName}</p>
-                <p className="font-bold text-sm leading-snug mt-0.5">{promo.title}</p>
-                <p className="text-white/60 text-xs mt-2">{promo.dateRange}</p>
-              </div>
-            ))}
-          </div>
-        </section> */}
       </div>
     </div>
   );
