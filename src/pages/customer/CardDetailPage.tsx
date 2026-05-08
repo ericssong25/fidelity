@@ -1,7 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, MapPin, Phone, Lock, Check, Zap, Percent, Gift, Star, Crown, Clock } from 'lucide-react';
+import { ArrowLeft, MapPin, Phone, Lock, Check, Zap, Percent, Gift, Star, Crown, Clock, QrCode } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 import LevelProgressBar from '../../components/LevelProgressBar';
 import Modal from '../../components/Modal';
 import SkeletonLoader from '../../components/SkeletonLoader';
@@ -47,6 +48,7 @@ export default function CardDetailPage() {
   const [tab, setTab] = useState<Tab>('Detalles');
   const [redeemModal, setRedeemModal] = useState<{ id: string; name: string; cost: number; description?: string | null } | null>(null);
   const [isRedeeming, setIsRedeeming] = useState(false);
+  const [showQrModal, setShowQrModal] = useState(false);
   
   // Data states
   const [loading, setLoading] = useState(true);
@@ -401,9 +403,17 @@ export default function CardDetailPage() {
           />
         </div>
 
-        <span className="absolute top-4 right-4 bg-white/20 text-white font-bold text-xs px-3 py-1 rounded-full">
-          {levelName}
-        </span>
+        <div className="absolute top-4 right-4 flex items-center gap-2">
+          <button
+            onClick={() => setShowQrModal(true)}
+            className="w-8 h-8 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center hover:bg-white/30 transition-colors"
+          >
+            <QrCode size={18} className="text-white" />
+          </button>
+          <span className="bg-white/20 text-white font-bold text-xs px-3 py-1 rounded-full">
+            {levelName}
+          </span>
+        </div>
       </div>
 
       {/* Tab bar */}
@@ -905,6 +915,25 @@ export default function CardDetailPage() {
             </div>
           </div>
         )}
+      </Modal>
+
+      <Modal open={showQrModal} onClose={() => setShowQrModal(false)} title="Tu Código QR">
+        <div className="flex flex-col items-center py-4">
+          <div className="bg-white rounded-2xl p-4 shadow-sm border border-[#B1A9E5]/10 mb-4">
+            <QRCodeSVG
+              value={loyaltyCard?.id || ''}
+              size={200}
+              level="M"
+              fgColor="#12173B"
+            />
+          </div>
+          <p className="text-[#12173B] font-semibold text-sm text-center">
+            Muestra este QR para que registren tu compra
+          </p>
+          <p className="text-[#B1A9E5] text-xs mt-2 text-center">
+            El personal del negocio podrá escanearlo y registrar tu compra al instante
+          </p>
+        </div>
       </Modal>
     </div>
   );
