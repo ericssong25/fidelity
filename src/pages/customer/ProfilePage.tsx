@@ -44,7 +44,7 @@ const businessMenuItem = {
 
 export default function ProfilePage() {
   const { showToast } = useApp();
-  const { logout, user } = useAuth();
+  const { logout, user, refreshAuth } = useAuth();
   const navigate = useNavigate();
   
   // Use real user data if available, otherwise fallback to mock data
@@ -297,15 +297,18 @@ export default function ProfilePage() {
         }
       }
 
+      const phoneToSave = editPhone && editPhone.replace(/\D/g, '').length > 3 ? editPhone : null;
+
       supabase
         .from('profiles')
-        .update({ name: editName, phone: editPhone || null })
+        .update({ name: editName, phone: phoneToSave })
         .eq('id', user.id)
         .then(({ error }) => {
           if (error) {
             console.error('Error updating profile:', error);
             showToast('Error al actualizar perfil', 'error');
           } else {
+            refreshAuth();
             showToast('¡Perfil actualizado!', 'success');
             setEditModal(false);
           }
@@ -429,6 +432,8 @@ export default function ProfilePage() {
               key={item.label}
               onClick={() => {
                 if (item.label === 'Editar perfil') {
+                  setEditName(displayUser.name);
+                  setEditPhone(displayUser.phone || '');
                   setEditModal(true);
                 } else if (item.label === 'Cerrar sesión') {
                   setLogoutModal(true);

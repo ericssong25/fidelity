@@ -284,7 +284,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           data: {
             name: userData.name,
             username: userData.username,
-            phone: userData.phone,
+            phone: userData.phone && userData.phone.replace(/\D/g, '').length > 3 ? userData.phone : null,
           },
         },
       });
