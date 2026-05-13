@@ -258,6 +258,24 @@ export default function ProfilePage() {
 
   async function handleEditProfile() {
     if (user) {
+      const errors: string[] = [];
+
+      if (!editName.trim()) {
+        errors.push('El nombre es obligatorio.');
+      }
+
+      if (editPhone) {
+        const phoneDigits = editPhone.replace(/\D/g, '');
+        if (phoneDigits.length > 3 && phoneDigits.length !== 10) {
+          errors.push('El número de teléfono no es válido. Debe tener 7 dígitos.');
+        }
+      }
+
+      if (errors.length > 0) {
+        showToast(errors.join('. '), 'error');
+        return;
+      }
+
       // Check phone uniqueness — compare only digits
       if (editPhone) {
         const cleanPhone = editPhone.replace(/\D/g, '');

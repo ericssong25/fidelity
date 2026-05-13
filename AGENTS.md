@@ -7,11 +7,11 @@ Customer loyalty app ("Zuma") — React SPA with Supabase backend. Two roles: **
 ## Commands
 
 ```bash
-npm run dev          # Dev server (localhost:5173)
-npm run lint         # ESLint
-npm run typecheck    # tsc --noEmit -p tsconfig.app.json
-npm run build        # Production build
-npm run preview      # Preview production build
+pnpm run dev         # Dev server (localhost:5173)
+pnpm run lint        # ESLint
+pnpm run typecheck   # tsc --noEmit -p tsconfig.app.json
+pnpm run build       # Production build
+pnpm run preview     # Preview production build
 ```
 
 No test runner is configured. Run `lint` and `typecheck` before considering work done.

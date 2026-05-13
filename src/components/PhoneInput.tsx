@@ -70,7 +70,7 @@ export default function PhoneInput({ value, onChange, placeholder }: Props) {
 
   function handleNumberChange(e: React.ChangeEvent<HTMLInputElement>) {
     const raw = e.target.value.replace(/\D/g, '');
-    const clean = raw.startsWith('0') ? raw.slice(1) : raw;
+    const clean = raw;
     const formatted = formatNumber(clean);
     emitChange(prefix, formatted);
   }

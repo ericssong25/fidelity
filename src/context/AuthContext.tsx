@@ -239,6 +239,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     password: string;
   }): Promise<boolean> => {
     try {
+      // Validate phone format (if provided)
+      if (userData.phone) {
+        const phoneDigits = userData.phone.replace(/\D/g, '');
+        if (phoneDigits.length > 3 && phoneDigits.length !== 10) {
+          throw new Error('El número de teléfono no es válido. Debe tener 7 dígitos.');
+        }
+      }
+
       // Check username uniqueness
       const { data: existingUsername } = await supabase
         .from('profiles')

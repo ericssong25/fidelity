@@ -24,7 +24,7 @@ export default function AuthPage() {
   // Sign Up form state
   const [signUpName, setSignUpName] = useState('');
   const [signUpEmail, setSignUpEmail] = useState('');
-  const [signUpUsername, setSignUpUsername] = useState('@');
+  const [signUpUsername, setSignUpUsername] = useState('');
   const [signUpPhone, setSignUpPhone] = useState('');
   const [signUpPassword, setSignUpPassword] = useState('');
   const [signUpConfirmPassword, setSignUpConfirmPassword] = useState('');
@@ -59,29 +59,41 @@ export default function AuthPage() {
   async function handleSignUp(e: React.FormEvent) {
     e.preventDefault();
     
-    if (!signUpName || !signUpEmail || !signUpUsername || !signUpPassword || !signUpConfirmPassword) {
-      showToast('Completa todos los campos', 'error');
-      return;
+    const errors: string[] = [];
+    
+    if (!signUpName.trim()) {
+      errors.push('El nombre completo es obligatorio.');
     }
     
-    // Basic validations
-    if (!signUpEmail.includes('@')) {
-      showToast('Ingresa un email válido', 'error');
-      return;
+    if (!signUpEmail.trim()) {
+      errors.push('El correo electrónico es obligatorio.');
+    } else if (!signUpEmail.includes('@')) {
+      errors.push('El correo electrónico no es válido.');
     }
     
-    if (signUpPassword.length < 6) {
-      showToast('La contraseña debe tener al menos 6 caracteres', 'error');
-      return;
+    if (!signUpUsername.trim()) {
+      errors.push('El nombre de usuario es obligatorio.');
     }
     
-    if (signUpPassword !== signUpConfirmPassword) {
-      showToast('Las contraseñas no coinciden', 'error');
-      return;
+    const phoneDigits = signUpPhone.replace(/\D/g, '');
+    if (phoneDigits.length > 3 && phoneDigits.length !== 10) {
+      errors.push('El número de teléfono no es válido. Debe tener 7 dígitos.');
     }
     
-    if (!signUpUsername.startsWith('@') || signUpUsername === '@') {
-      showToast('Ingresa un nombre de usuario válido después de @', 'error');
+    if (!signUpPassword) {
+      errors.push('La contraseña es obligatoria.');
+    } else if (signUpPassword.length < 6) {
+      errors.push('La contraseña debe tener al menos 6 caracteres.');
+    }
+    
+    if (!signUpConfirmPassword) {
+      errors.push('La confirmación de contraseña es obligatoria.');
+    } else if (signUpPassword !== signUpConfirmPassword) {
+      errors.push('Las contraseñas no coinciden.');
+    }
+    
+    if (errors.length > 0) {
+      showToast(errors.join('. '), 'error');
       return;
     }
     
@@ -89,7 +101,7 @@ export default function AuthPage() {
       const success = await register({
         name: signUpName,
         email: signUpEmail,
-        username: signUpUsername,
+        username: '@' + signUpUsername,
         phone: signUpPhone,
         password: signUpPassword
       });
@@ -109,7 +121,7 @@ export default function AuthPage() {
         // Clear form
         setSignUpName('');
         setSignUpEmail('');
-        setSignUpUsername('@');
+        setSignUpUsername('');
         setSignUpPhone('');
         setSignUpPassword('');
         setSignUpConfirmPassword('');
@@ -175,6 +187,8 @@ export default function AuthPage() {
                   <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#B1A9E5]" />
                   <input
                     type="email"
+                    name="email"
+                    autoComplete="email"
                     value={signInEmail}
                     onChange={e => setSignInEmail(e.target.value)}
                     placeholder="Ingresa tu correo"
@@ -189,6 +203,8 @@ export default function AuthPage() {
                   <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#B1A9E5]" />
                   <input
                     type={showPassword ? 'text' : 'password'}
+                    name="password"
+                    autoComplete="current-password"
                     value={signInPassword}
                     onChange={e => setSignInPassword(e.target.value)}
                     placeholder="Ingresa tu contraseña"
@@ -235,6 +251,7 @@ export default function AuthPage() {
                   <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#B1A9E5]" />
                   <input
                     type={showPassword ? 'text' : 'password'}
+                    autoComplete="new-password"
                     value={signUpPassword}
                     onChange={e => setSignUpPassword(e.target.value)}
                     placeholder="Crea una contraseña"
@@ -256,6 +273,7 @@ export default function AuthPage() {
                   <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#B1A9E5]" />
                   <input
                     type={showConfirmPassword ? 'text' : 'password'}
+                    autoComplete="new-password"
                     value={signUpConfirmPassword}
                     onChange={e => setSignUpConfirmPassword(e.target.value)}
                     placeholder="Confirma tu contraseña"
@@ -289,20 +307,13 @@ export default function AuthPage() {
                 <label className="text-xs font-semibold text-[#B1A9E5] mb-1 block">Usuario</label>
                 <div className="relative">
                   <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#B1A9E5]" />
+                  <span className="absolute left-9 top-1/2 -translate-y-1/2 text-[#12173B] font-semibold text-sm select-none">@</span>
                   <input
                     type="text"
                     value={signUpUsername}
-                    onChange={e => {
-                      const value = e.target.value;
-                      // Always ensure @ at the beginning
-                      if (!value.startsWith('@')) {
-                        setSignUpUsername('@' + value);
-                      } else {
-                        setSignUpUsername(value);
-                      }
-                    }}
-                    placeholder="@username"
-                    className="w-full pl-10 pr-4 py-3 rounded-inp border border-[#B1A9E5]/30 text-sm text-[#12173B] placeholder-[#B1A9E5] outline-none focus:border-[#7546ED] focus:ring-2 focus:ring-[#7546ED]/10 transition-all"
+                    onChange={e => setSignUpUsername(e.target.value)}
+                    placeholder="username"
+                    className="w-full pl-16 pr-4 py-3 rounded-inp border border-[#B1A9E5]/30 text-sm text-[#12173B] placeholder-[#B1A9E5] outline-none focus:border-[#7546ED] focus:ring-2 focus:ring-[#7546ED]/10 transition-all"
                   />
                 </div>
               </div>
@@ -339,7 +350,7 @@ export default function AuthPage() {
                     setIsSignIn(true);
                     setSignUpName('');
                     setSignUpEmail('');
-                    setSignUpUsername('@');
+                    setSignUpUsername('');
                     setSignUpPassword('');
                     setSignUpConfirmPassword('');
                   }}
