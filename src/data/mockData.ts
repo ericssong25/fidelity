@@ -22,6 +22,7 @@ export interface Customer {
   username: string;
   phone: string | null;
   initials: string;
+  avatarId: string | null;
 }
 
 export interface Product {
@@ -99,6 +100,7 @@ export const sofia: Customer = {
   username: '@sofiamar',
   phone: null,
   initials: 'SM',
+  avatarId: null,
 };
 
 export const sofiaLoyalty: LoyaltyRecord[] = [

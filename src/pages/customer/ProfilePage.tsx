@@ -3,6 +3,8 @@ import { HelpCircle, LogOut, ChevronRight, CreditCard as Edit3, Store, Building,
 import PhoneInput from '../../components/PhoneInput';
 import { sofia } from '../../data/mockData';
 import Modal from '../../components/Modal';
+import UserAvatar from '../../components/UserAvatar';
+import AvatarSelector from '../../components/AvatarSelector';
 import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -173,6 +175,7 @@ export default function ProfilePage() {
   const [editModal, setEditModal] = useState(false);
   const [logoutModal, setLogoutModal] = useState(false);
   const [businessModal, setBusinessModal] = useState(false);
+  const [avatarModal, setAvatarModal] = useState(false);
   const [editName, setEditName] = useState(displayUser.name);
   const [editPhone, setEditPhone] = useState(displayUser.phone || '');
   
@@ -332,9 +335,14 @@ export default function ProfilePage() {
         className="px-5 pt-12 pb-8 flex flex-col items-center"
         style={{ background: 'linear-gradient(135deg, #12173B, #7546ED)' }}
       >
-        <div className="w-20 h-20 rounded-full flex items-center justify-center text-white font-extrabold text-2xl mb-3"
-          style={{ background: 'linear-gradient(135deg, #7546ED, #DC89FF)' }}>
-          {displayUser.initials}
+        <div className="mb-3">
+          <UserAvatar
+            avatarId={displayUser.avatarId}
+            name={displayUser.name}
+            size="xl"
+            editable
+            onClick={() => setAvatarModal(true)}
+          />
         </div>
         <h1 className="text-white font-extrabold text-xl">{displayUser.name}</h1>
         <p className="text-white/60 text-sm">{displayUser.username}</p>
@@ -706,6 +714,14 @@ export default function ProfilePage() {
           </div>
         </div>
       </Modal>
+
+      {/* Avatar Selector Modal */}
+      <AvatarSelector
+        open={avatarModal}
+        onClose={() => setAvatarModal(false)}
+        currentAvatarId={displayUser.avatarId}
+        userName={displayUser.name}
+      />
 
       {/* Version */}
       <div className="text-center pb-8 mt-4">

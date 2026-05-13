@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Eye, EyeOff, Mail, Lock, User } from 'lucide-react';
 import PhoneInput from '../../components/PhoneInput';
+import AvatarSelector from '../../components/AvatarSelector';
 import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -16,6 +17,7 @@ export default function AuthPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [demoMode, setDemoMode] = useState(false); // Temporal para testing
+  const [showAvatarPicker, setShowAvatarPicker] = useState(false);
   
   // Sign In form state
   const [signInEmail, setSignInEmail] = useState('');
@@ -112,7 +114,7 @@ export default function AuthPage() {
         // Auto-login after registration
         const loginSuccess = await login(signUpEmail, signUpPassword);
         if (loginSuccess) {
-          navigate(returnUrl || '/home');
+          setShowAvatarPicker(true);
         } else {
           showToast('Cuenta creada. Por favor inicia sesión.', 'info');
           setIsSignIn(true);
@@ -377,6 +379,17 @@ Al continuar, aceptas nuestros Términos de Servicio y Política de Privacidad
           </p>
           <p className="text-xs text-[#B1A9E5]/60 mt-2 font-medium">Beta 1.0.0</p>
         </div>
+
+        {/* Post-registration Avatar Picker */}
+        <AvatarSelector
+          open={showAvatarPicker}
+          onClose={() => {
+            setShowAvatarPicker(false);
+            navigate(returnUrl || '/home');
+          }}
+          currentAvatarId={null}
+          userName={signUpName}
+        />
       </div>
     </div>
   );

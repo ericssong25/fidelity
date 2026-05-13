@@ -10,6 +10,7 @@ interface User {
   username: string;
   phone: string | null;
   initials: string;
+  avatarId: string | null;
 }
 
 interface AuthContextType {
@@ -27,6 +28,7 @@ interface AuthContextType {
     password: string;
   }) => Promise<boolean>;
   refreshAuth: () => Promise<void>;
+  updateAvatar: (avatarId: string | null) => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -45,7 +47,7 @@ async function buildUser(supabaseUser: SupabaseUser): Promise<User> {
 
   const profilePromise = supabase
     .from('profiles')
-    .select('name, username, phone')
+    .select('name, username, phone, avatar_id')
     .eq('id', supabaseUser.id)
     .maybeSingle();
 
@@ -60,6 +62,7 @@ async function buildUser(supabaseUser: SupabaseUser): Promise<User> {
   const name = profileData?.name || supabaseUser.email?.split('@')[0] || 'User';
   const username = profileData?.username || `@${supabaseUser.email?.split('@')[0]}` || '@user';
   const phone = profileData?.phone || null;
+  const avatarId = profileData?.avatar_id || null;
 
   return {
     id: supabaseUser.id,
@@ -67,6 +70,7 @@ async function buildUser(supabaseUser: SupabaseUser): Promise<User> {
     email: supabaseUser.email || '',
     username,
     phone,
+    avatarId,
     initials: name
       .split(' ')
       .map((n: string) => n[0])
@@ -157,6 +161,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           email: validatedUser.email || '',
           username: `@${validatedUser.email?.split('@')[0] || 'user'}`,
           phone: null,
+          avatarId: null,
           initials: name.slice(0, 2).toUpperCase(),
         };
         if (isMounted) {
@@ -188,6 +193,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               email: session.user.email || '',
               username: `@${session.user.email?.split('@')[0] || 'user'}`,
               phone: null,
+              avatarId: null,
               initials: name.slice(0, 2).toUpperCase(),
             };
             setSupabaseUser(session.user);
@@ -229,6 +235,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error('Logout error:', error);
     }
+  };
+
+  const updateAvatar = async (avatarId: string | null) => {
+    if (!user) return;
+    await supabase
+      .from('profiles')
+      .update({ avatar_id: avatarId })
+      .eq('id', user.id);
+    setUser(prev => prev ? { ...prev, avatarId } : null);
   };
 
   const register = async (userData: {
@@ -317,6 +332,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         logout,
         register,
         refreshAuth,
+        updateAvatar,
       }}
     >
       {children}
