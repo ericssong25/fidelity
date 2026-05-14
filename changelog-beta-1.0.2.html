@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Beta 1.0.2 Notes Releases — Zuma</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: #F4F3FB;
+      color: #12173B;
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 40px 24px 80px;
+      line-height: 1.6;
+    }
+
+    .hero {
+      background: linear-gradient(135deg, #12173B, #7546ED);
+      border-radius: 24px;
+      padding: 44px 32px;
+      margin-bottom: 36px;
+      color: white;
+      text-align: center;
+    }
+    .hero h1 {
+      font-size: 30px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+    .hero .subtitle {
+      font-size: 15px;
+      color: rgba(255,255,255,0.6);
+      margin-top: 6px;
+    }
+    .hero .tag {
+      display: inline-block;
+      background: rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.18);
+      border-radius: 30px;
+      padding: 5px 18px;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.8px;
+      margin-bottom: 16px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 18px;
+      border: 1px solid rgba(177,169,229,0.12);
+      padding: 28px 28px 24px;
+      margin-bottom: 22px;
+      box-shadow: 0 2px 8px rgba(18,23,59,0.03);
+    }
+    .card h2 {
+      font-size: 19px;
+      font-weight: 800;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .card p {
+      font-size: 14px;
+      color: #3A3F5A;
+      margin-bottom: 12px;
+    }
+    .card ul {
+      padding-left: 20px;
+      margin-bottom: 4px;
+    }
+    .card li {
+      font-size: 13.5px;
+      color: #12173B;
+      margin-bottom: 6px;
+      line-height: 1.6;
+    }
+    .card li strong { color: #7546ED; }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 13px;
+      font-weight: 700;
+      margin-right: 16px;
+      margin-bottom: 4px;
+    }
+    .chip-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .highlight {
+      background: linear-gradient(135deg, #7546ED08, #DC89FF08);
+      border-left: 3px solid #7546ED;
+      padding: 14px 18px;
+      border-radius: 0 12px 12px 0;
+      margin: 16px 0;
+      font-size: 13px;
+      color: #3A3F5A;
+    }
+
+    .footer {
+      text-align: center;
+      color: #B1A9E5;
+      font-size: 12px;
+      margin-top: 30px;
+      padding-top: 20px;
+      border-top: 1px solid rgba(177,169,229,0.15);
+    }
+  </style>
+</head>
+<body>
+
+<div class="hero">
+  <span class="tag">BETA 1.0.2</span>
+  <h1>Zuma — Novedades</h1>
+  <p class="subtitle">Tu identidad, tus reglas</p>
+</div>
+
+<div class="card">
+  <h2>🖼️ Avatares personalizados</h2>
+  <p>Ahora puedes elegir un avatar para tu perfil entre <strong>18 ilustraciones exclusivas</strong> de Zuma, organizadas en tres colecciones:</p>
+  <ul>
+    <li><strong>Aventureros</strong> — personajes estilo acuarela con mucha personalidad.</li>
+    <li><strong>Minimalistas</strong> — caras de trazo fino y elegante.</li>
+    <li><strong>Emojis</strong> — íconos coloridos y divertidos.</li>
+  </ul>
+  <p>Toca tu avatar actual en la <strong>pantalla de perfil</strong> para abrir el selector. También aparece en la <strong>barra inferior</strong>, donde el ícono de perfil ahora muestra tu avatar en miniatura.</p>
+  <p>Si prefieres mantener tus iniciales, puedes elegir la opción <strong>"Iniciales"</strong> dentro del selector. Tu avatar se guarda al instante y se refleja en toda la app sin necesidad de recargar.</p>
+  <div class="highlight">
+    <strong>🆕 ¿Eres nuevo en Zuma?</strong><br>
+    Al registrarte, después de crear tu cuenta verás el selector de avatar para que empieces con tu estilo desde el primer momento. Puedes saltarlo y elegir después desde tu perfil.
+  </div>
+</div>
+
+<div class="card">
+  <h2>📝 Registro más claro y seguro</h2>
+  <p>Renovamos el formulario de registro para que sea más fácil de completar y te avise exactamente qué falta.</p>
+  <ul>
+    <li><strong>Errores todos a la vez</strong> — si hay más de un campo por corregir, te los mostramos juntos en un solo aviso. Ya no tienes que corregir uno por uno.</li>
+    <li><strong>Nombre de usuario mejorado</strong> — el arroba <strong>@</strong> ahora está fijo antes del campo. Solo escribes tu nombre, sin preocuparte por el símbolo.</li>
+    <li><strong>Teléfono opcional pero validado</strong> — no es obligatorio poner tu número, pero si decides ponerlo, te avisamos si te faltan dígitos para que quede completo.</li>
+    <li><strong>Autocompletado del navegador</strong> — al iniciar sesión, tu navegador ahora puede recordar y rellenar tu correo y contraseña automáticamente.</li>
+  </ul>
+</div>
+
+<div class="card">
+  <h2>👤 Perfil mejorado</h2>
+  <p>Varios ajustes para que editar tu perfil sea una experiencia fluida:</p>
+  <ul>
+    <li><strong>Cambios instantáneos</strong> — al guardar tu nombre o teléfono, el cambio se refleja de inmediato en tu perfil. Ya no necesitas salir y volver a entrar.</li>
+    <li><strong>Modal sin residuos</strong> — cada vez que abres el editor de perfil, ves tus datos reales. Si escribiste algo sin guardar y cerraste, no aparecerá la próxima vez.</li>
+    <li><strong>Teléfono oculto si no lo tienes</strong> — si nunca registraste un número, la línea del teléfono simplemente no aparece en tu perfil.</li>
+    <li><strong>Campo de teléfono corregido</strong> — ahora puedes escribir números que empiecen con cero sin problemas.</li>
+  </ul>
+</div>
+
+<div class="card">
+  <h2>🔒 Mayor integridad de datos</h2>
+  <p>Reforzamos la base de datos para evitar duplicados y mantener tu información segura:</p>
+  <ul>
+    <li><strong>Nombres de usuario únicos</strong> — no pueden existir dos cuentas con el mismo @usuario.</li>
+    <li><strong>Teléfonos únicos</strong> — un mismo número no puede estar asociado a dos cuentas distintas.</li>
+    <li>Estas reglas se aplican tanto al registrarte como al editar tu perfil.</li>
+  </ul>
+</div>
+
+<div class="highlight">
+  <strong>💡 ¿Sabías que…?</strong><br>
+  Tu avatar aparece en la barra inferior junto al texto "Perfil". Si aún no has elegido uno, verás tus iniciales con el degradado morado de siempre. Puedes cambiarlo cuantas veces quieras desde tu perfil.
+</div>
+
+<div class="footer">
+  Zuma · Beta 1.0.2 · Mayo 2026<br>
+  Hecho para negocios y clientes que valoran la lealtad.
+</div>
+
+</body>
+</html>

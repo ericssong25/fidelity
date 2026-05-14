@@ -1,7 +1,10 @@
 import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
 import { ShoppingCart, Gift } from 'lucide-react';
 import RoleSwitcher from '../../components/RoleSwitcher';
 import LoyaltyCard from '../../components/LoyaltyCard';
+import TransactionDetailModal from '../../components/TransactionDetailModal';
+import type { TransactionDetail, TransactionBenefits } from '../../components/TransactionDetailModal';
 import { sofia } from '../../data/mockData';
 import { useAuth } from '../../context/AuthContext';
 import { useSupabaseQuery } from '../../hooks/useSupabaseQuery';
@@ -34,6 +37,7 @@ interface PurchaseHistory {
   description: string;
   points: number;
   created_at: string;
+  reference_id: string | null;
 }
 
 interface RedemptionHistory {
@@ -48,6 +52,10 @@ interface RedemptionHistory {
 export default function HomePage() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const [selectedTransactionId, setSelectedTransactionId] = useState<string | null>(null);
+  const [purchaseDetail, setPurchaseDetail] = useState<TransactionDetail | null>(null);
+  const [purchaseBenefits, setPurchaseBenefits] = useState<TransactionBenefits | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
   
   // Use real user data if available, otherwise fallback to mock data
   const displayUser = user || sofia;
@@ -133,7 +141,7 @@ export default function HomePage() {
 
         const { data, error } = await supabase
           .from('point_transactions')
-          .select('id, points, description, created_at, loyalty_card_id')
+          .select('id, points, description, created_at, loyalty_card_id, reference_id')
           .in('loyalty_card_id', cardIds)
           .eq('type', 'earned')
           .order('created_at', { ascending: false })
@@ -164,13 +172,14 @@ export default function HomePage() {
         });
 
         const purchases: PurchaseHistory[] = (data || []).map((tx: {
-          id: string; points: number; description: string; created_at: string; loyalty_card_id: string;
+          id: string; points: number; description: string; created_at: string; loyalty_card_id: string; reference_id: string | null;
         }) => ({
           id: tx.id,
           business_name: businessesMap[cardBusinessMap[tx.loyalty_card_id]] || 'Negocio',
           description: tx.description || '',
           points: tx.points,
           created_at: tx.created_at,
+          reference_id: tx.reference_id,
         }));
 
         return { data: purchases, error: null };
@@ -266,6 +275,100 @@ export default function HomePage() {
 
   const purchases = recentPurchases || [];
   const redemptions = recentRedemptions || [];
+
+  async function handlePurchaseTap(purchase: PurchaseHistory) {
+    setSelectedTransactionId(purchase.id);
+    if (!purchase.reference_id) {
+      setPurchaseDetail(null);
+      setPurchaseBenefits(null);
+      return;
+    }
+
+    setDetailLoading(true);
+    setPurchaseDetail(null);
+    setPurchaseBenefits(null);
+
+    const { data: purchaseData } = await supabase
+      .from('purchases')
+      .select('id, total_amount, total_points, business_id, created_at, loyalty_card_id')
+      .eq('id', purchase.reference_id)
+      .maybeSingle();
+
+    if (!purchaseData) {
+      setDetailLoading(false);
+      return;
+    }
+
+    const { data: itemsData } = await supabase
+      .from('purchase_items')
+      .select('quantity, unit_price, total_points, product_id')
+      .eq('purchase_id', purchaseData.id);
+
+    const productIds = [...new Set((itemsData || []).map(i => i.product_id).filter(Boolean))];
+    const productsMap: Record<string, string> = {};
+
+    if (productIds.length > 0) {
+      const { data: productsData } = await supabase
+        .from('products')
+        .select('id, name')
+        .in('id', productIds as string[]);
+      productsData?.forEach((p: { id: string; name: string }) => {
+        productsMap[p.id] = p.name;
+      });
+    }
+
+    const { data: bizData } = await supabase
+      .from('businesses')
+      .select('name, loyalty_levels')
+      .eq('id', purchaseData.business_id)
+      .maybeSingle();
+
+    const loyaltyLevels = (bizData?.loyalty_levels as { name: string; multiplier: number; discount_percent: number }[] | undefined) || [];
+
+    const { data: cardData } = await supabase
+      .from('loyalty_cards')
+      .select('current_level')
+      .eq('id', purchaseData.loyalty_card_id)
+      .maybeSingle();
+
+    const currentLevel = cardData?.current_level || 'Bronze';
+    const levelData = loyaltyLevels.find((l: { name: string }) => l.name === currentLevel);
+
+    if (levelData && (levelData.multiplier > 1 || levelData.discount_percent > 0)) {
+      setPurchaseBenefits({
+        multiplier: levelData.multiplier || 1,
+        discountPercent: levelData.discount_percent || 0,
+        level: currentLevel,
+      });
+    }
+
+    setPurchaseDetail({
+      storeName: bizData?.name || purchase.business_name,
+      date: purchaseData.created_at,
+      items: (itemsData || []).map((item: {
+        quantity: number;
+        unit_price: string | number;
+        total_points: number;
+        product_id: string;
+      }) => ({
+        name: productsMap[item.product_id] || 'Producto',
+        quantity: item.quantity,
+        unitPrice: typeof item.unit_price === 'string' ? parseFloat(item.unit_price) : item.unit_price,
+        totalPoints: item.total_points,
+      })),
+      totalAmount: typeof purchaseData.total_amount === 'string'
+        ? parseFloat(purchaseData.total_amount)
+        : purchaseData.total_amount,
+      totalPoints: purchaseData.total_points,
+    });
+    setDetailLoading(false);
+  }
+
+  function handleCloseDetail() {
+    setSelectedTransactionId(null);
+    setPurchaseDetail(null);
+    setPurchaseBenefits(null);
+  }
 
   return (
     <div className="min-h-screen bg-[#F4F3FB] pb-24">
@@ -384,7 +487,8 @@ export default function HomePage() {
                 return (
                   <div
                     key={purchase.id}
-                    className="bg-white rounded-2xl p-4 shadow-sm border border-[#B1A9E5]/10"
+                    onClick={() => handlePurchaseTap(purchase)}
+                    className="bg-white rounded-2xl p-4 shadow-sm border border-[#B1A9E5]/10 cursor-pointer hover:shadow-md transition-shadow"
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
@@ -500,6 +604,14 @@ export default function HomePage() {
           )}
         </section>
       </div>
+
+      <TransactionDetailModal
+        open={selectedTransactionId !== null}
+        onClose={handleCloseDetail}
+        detail={purchaseDetail}
+        benefits={purchaseBenefits}
+        loading={detailLoading}
+      />
     </div>
   );
 }

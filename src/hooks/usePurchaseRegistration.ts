@@ -257,7 +257,7 @@ export function usePurchaseRegistration({
 
       // 3. Create point transaction (with multiplied points)
       const itemDescriptions = cart
-        .map(item => `${item.quantity} ${item.name}${item.quantity > 1 ? 's' : ''}`)
+        .map(item => `${item.quantity} ${item.name}`)
         .join(', ');
 
       const { error: transactionError } = await supabase

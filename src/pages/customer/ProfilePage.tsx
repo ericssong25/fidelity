@@ -378,60 +378,6 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* My Loyalty */}
-      <div className="px-5 mt-5">
-        <h2 className="font-bold text-[#12173B] text-base mb-3">Tus tarjetas</h2>
-        <div className="bg-white rounded-2xl shadow-sm border border-[#B1A9E5]/10 overflow-hidden">
-          {cardsLoading ? (
-            <div className="px-4 py-6 text-center">
-              <div className="w-8 h-8 border-2 border-[#7546ED]/30 border-t-[#7546ED] rounded-full animate-spin mx-auto mb-2"></div>
-              <span className="text-[#B1A9E5] text-sm">Cargando tus tarjetas...</span>
-            </div>
-          ) : userCards.length === 0 ? (
-            <div className="px-4 py-6 text-center">
-              <Store size={32} className="text-[#B1A9E5] mx-auto mb-2" />
-              <span className="text-[#12173B] font-medium text-sm">Sin tarjetas aún</span>
-              <p className="text-[#B1A9E5] text-xs mt-1">Visita negocios para obtener tarjetas</p>
-            </div>
-          ) : (
-            userCards.map((card, i) => {
-              const businessName = card.businesses?.[0]?.name || 'Negocio desconocido';
-              const levelName = card.loyalty_levels?.[0]?.name || 'Miembro';
-              const levelColor = card.loyalty_levels?.[0]?.color || '#7546ED';
-              
-              return (
-                <div
-                  key={card.id}
-                  className={`flex items-center justify-between px-4 py-3 ${
-                    i < userCards.length - 1 ? 'border-b border-[#B1A9E5]/10' : ''
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-bold text-sm"
-                      style={{ background: `linear-gradient(135deg, ${levelColor}, #DC89FF)` }}>
-                      {businessName.charAt(0).toUpperCase()}
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="font-semibold text-[#12173B] text-sm">{businessName}</span>
-                      <span className="text-[#B1A9E5] text-xs">{card.total_visits || 0} visitas</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[#7546ED] font-bold text-sm">{card.current_points || 0} pts</span>
-                    <span 
-                      className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white"
-                      style={{ background: levelColor }}
-                    >
-                      {levelName}
-                    </span>
-                  </div>
-                </div>
-              );
-            })
-          )}
-        </div>
-      </div>
-
       {/* Menu */}
       <div className="px-5 mt-5">
         <div className="bg-white rounded-2xl shadow-sm border border-[#B1A9E5]/10 overflow-hidden">
