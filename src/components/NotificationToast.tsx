@@ -26,6 +26,7 @@ export default function NotificationToast() {
   const [visible, setVisible] = useState(false);
   const [closing, setClosing] = useState(false);
   const [showDetail, setShowDetail] = useState(false);
+  const [detailNotification, setDetailNotification] = useState<typeof latestNotification>(null);
 
   useEffect(() => {
     if (!latestNotification) return;
@@ -52,6 +53,7 @@ export default function NotificationToast() {
   }
 
   function handleTap() {
+    setDetailNotification(latestNotification);
     handleClose();
     setTimeout(() => setShowDetail(true), 300);
   }
@@ -118,9 +120,10 @@ export default function NotificationToast() {
         open={showDetail}
         onClose={() => {
           setShowDetail(false);
+          setDetailNotification(null);
           handleMarkAsRead();
         }}
-        notification={latestNotification}
+        notification={detailNotification}
       />
     </>
   );
