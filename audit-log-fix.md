@@ -20,15 +20,15 @@
 **Fix:** Eliminar o conectar a datos reales.
 **Estado:** Pendiente — se implementará con el marketplace de negocios.
 
-### ✅ #4 — Sin flujo de "Olvidé mi contraseña"
+### ⚠️ #4 — Sin flujo de "Olvidé mi contraseña"
 **Archivo:** `AuthPage.tsx`, `ResetPasswordPage.tsx`, `App.tsx`, `ProfilePage.tsx`
 **Fix:**
 - `AuthPage.tsx`: Link "¿Olvidaste tu contraseña?" en Sign In → input email → `resetPasswordForEmail()` → toast confirmación
 - `ResetPasswordPage.tsx`: Nuevo — recibe token vía URL, formulario nueva contraseña + confirmación, `updateUser({ password })`
 - `App.tsx`: Ruta pública `/reset-password`
-- `ProfilePage.tsx`: Botón "Cambiar contraseña" en el menú
+- `ProfilePage.tsx`: Botón "Cambiar contraseña" en el menú con modal de confirmación
 - Email templates HTML en `email-templates/reset-password.html` y `email-templates/password-changed.html`
-**Estado:** ✅ Completado
+**Estado:** ⚠️ Parcial — Ocultado temporalmente por error en el flujo. UI removida de AuthPage y ProfilePage. Infraestructura (ResetPasswordPage, ruta, templates) se mantiene para reactivar cuando se resuelva.
 
 ### ✅ #5 — RLS: falta UPDATE policy en loyalty_cards para clientes
 **Archivo:** Supabase RLS policies
@@ -192,15 +192,21 @@
 **Fix:** `ALTER TABLE profiles DROP COLUMN IF EXISTS user_id`
 **Estado:** ✅ Completado
 
+### 🆕 B5 — Error en flujo de cambio de contraseña
+**Archivos:** `AuthPage.tsx`, `ProfilePage.tsx`, `ResetPasswordPage.tsx`
+**Problema:** `resetPasswordForEmail()` devuelve error al intentar cambiar contraseña. No se pudo diagnosticar la causa raíz.
+**Acción:** UI oculta temporalmente en AuthPage ("¿Olvidaste tu contraseña?") y ProfilePage ("Cambiar contraseña"). Infraestructura (ResetPasswordPage, ruta, templates) se mantiene.
+**Estado:** 🔧 Pendiente revisión. Requiere debug del flujo completo: Supabase Auth settings, `resetPasswordForEmail()`, callback `/reset-password`, `updateUser()`.
+
 ---
 
 ## Resumen final
 
 | Prioridad | Cantidad | Completados | Pendientes |
 |---|---|---|---|
-| 🔴 Critical | 5 | ✅ #1, #4, #5 | ⏳ #2, #3 |
+| 🔴 Critical | 5 | ✅ #1, #5, ⚠️ #4 | ⏳ #2, #3 |
 | 🟠 High | 7 | ✅ #7, #8, #10, #11 | #6, #9, #12 |
 | 🟡 Medium | 8 | ✅ #14, #15, #16, #17, #18 | #13, #19, #20 |
 | 🟢 Low | 6 | 0 | #21–#26 |
-| 🆕 Bugs extras | 4 | ✅ B1–B4 | 0 |
-| **TOTAL** | **30** | **16** | **14** |
+| 🆕 Bugs extras | 5 | ✅ B1–B4 | 🔧 B5 |
+| **TOTAL** | **31** | **16** | **15** |

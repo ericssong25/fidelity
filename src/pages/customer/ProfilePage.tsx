@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { HelpCircle, LogOut, ChevronRight, CreditCard as Edit3, Store, Building, Phone, MapPin, KeyRound } from 'lucide-react';
+import { HelpCircle, LogOut, ChevronRight, CreditCard as Edit3, Store, Building, Phone, MapPin } from 'lucide-react';
 import PhoneInput from '../../components/PhoneInput';
 import Modal from '../../components/Modal';
 import UserAvatar from '../../components/UserAvatar';
@@ -33,7 +33,6 @@ interface LoyaltyCardWithBusiness {
 
 const menuItems = [
   { icon: Edit3, label: 'Editar perfil', color: 'text-[#12173B]' },
-  { icon: KeyRound, label: 'Cambiar contraseña', color: 'text-[#12173B]' },
   { icon: HelpCircle, label: 'Ayuda y soporte', color: 'text-[#12173B]' },
   { icon: LogOut, label: 'Cerrar sesión', color: 'text-[#FF6B6B]' },
 ];
@@ -173,7 +172,6 @@ export default function ProfilePage() {
   const [logoutModal, setLogoutModal] = useState(false);
   const [businessModal, setBusinessModal] = useState(false);
   const [avatarModal, setAvatarModal] = useState(false);
-  const [passwordModal, setPasswordModal] = useState(false);
   const [editName, setEditName] = useState(user?.name || '');
   const [editPhone, setEditPhone] = useState(user?.phone || '');
   
@@ -393,8 +391,6 @@ export default function ProfilePage() {
                   setEditName(user?.name || '');
                   setEditPhone(user?.phone || '');
                   setEditModal(true);
-                } else if (item.label === 'Cambiar contraseña') {
-                  setPasswordModal(true);
                 } else if (item.label === 'Cerrar sesión') {
                   setLogoutModal(true);
                 } else {
@@ -663,42 +659,6 @@ export default function ProfilePage() {
               className="flex-1 py-3 rounded-btn bg-[#FF6B6B] text-white font-bold text-sm"
             >
               Cerrar sesión
-            </button>
-          </div>
-        </div>
-      </Modal>
-
-      {/* Change Password Confirmation Modal */}
-      <Modal open={passwordModal} onClose={() => setPasswordModal(false)} title="Cambiar contraseña">
-        <div className="space-y-4">
-          <div className="text-center py-2">
-            <div className="w-16 h-16 rounded-full bg-[#7546ED]/10 flex items-center justify-center mx-auto mb-4">
-              <KeyRound size={24} className="text-[#7546ED]" />
-            </div>
-            <h3 className="font-bold text-[#12173B] text-lg mb-2">Cambiar contraseña</h3>
-            <p className="text-[#B1A9E5] text-sm">
-              Te enviaremos un enlace a <strong className="text-[#12173B]">{user?.email}</strong> para que puedas restablecer tu contraseña de forma segura.
-            </p>
-          </div>
-
-          <div className="flex gap-3">
-            <button
-              onClick={() => setPasswordModal(false)}
-              className="flex-1 py-3 rounded-btn border border-[#B1A9E5]/40 text-[#B1A9E5] font-semibold text-sm"
-            >
-              Cancelar
-            </button>
-            <button
-              onClick={() => {
-                supabase.auth.resetPasswordForEmail(user?.email || '', {
-                  redirectTo: window.location.origin + '/reset-password',
-                });
-                showToast('Revisa tu correo para restablecer tu contraseña', 'success');
-                setPasswordModal(false);
-              }}
-              className="flex-1 py-3 rounded-btn bg-[#7546ED] text-white font-bold text-sm"
-            >
-              Enviar enlace
             </button>
           </div>
         </div>
