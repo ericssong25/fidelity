@@ -11,6 +11,7 @@ import { useEffect } from 'react';
 
 // Auth
 import AuthPage from './pages/auth/AuthPage';
+import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 
 // Customer Pages
 import HomePage from './pages/customer/HomePage';
@@ -79,7 +80,6 @@ function AuthenticatedRoutes() {
   return (
     <>
       {role === 'customer' ? <CustomerLayout /> : <BusinessLayout />}
-      <ToastContainer />
     </>
   );
 }
@@ -130,6 +130,7 @@ function AppRoutes() {
     <>
       <Routes>
         <Route path="/auth" element={<AuthPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/*" element={<AuthGuard />} />
       </Routes>
       <ToastContainer />

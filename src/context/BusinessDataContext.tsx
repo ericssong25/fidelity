@@ -16,7 +16,7 @@ interface LoyaltyCard {
   user_id: string;
   business_id: string;
   card_number: string;
-  current_level_id: string | null;
+  current_level: string | null;
   current_points: number;
   total_points_earned: number;
   total_visits: number;
@@ -56,6 +56,7 @@ interface BusinessDataContextType {
   updateBusiness: (data: Partial<Business>) => Promise<{ success: boolean; error?: string }>;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const BusinessDataContext = createContext<BusinessDataContextType | null>(null);
 
 // eslint-disable-next-line react-refresh/only-export-components

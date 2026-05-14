@@ -63,7 +63,7 @@ export default function ScanPurchasePage() {
         // Load loyalty card
         const { data: card, error: cardError } = await supabase
           .from('loyalty_cards')
-          .select('id, user_id, business_id, current_points, total_visits, current_level_id, current_level')
+          .select('id, user_id, business_id, current_points, total_visits, current_level')
           .eq('id', cardId)
           .maybeSingle();
 

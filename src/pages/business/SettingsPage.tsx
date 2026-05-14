@@ -28,6 +28,16 @@ function formatTimeRange(open: string, close: string): string {
   return `${open} – ${close}`;
 }
 
+const defaultHours = [
+  { day: 'Lunes', hours: 'Cerrado', open: 'Cerrado', close: 'Cerrado' },
+  { day: 'Martes', hours: '9:00 AM – 6:00 PM', open: '9:00 AM', close: '6:00 PM' },
+  { day: 'Miércoles', hours: '9:00 AM – 6:00 PM', open: '9:00 AM', close: '6:00 PM' },
+  { day: 'Jueves', hours: '9:00 AM – 6:00 PM', open: '9:00 AM', close: '6:00 PM' },
+  { day: 'Viernes', hours: '9:00 AM – 6:00 PM', open: '9:00 AM', close: '6:00 PM' },
+  { day: 'Sábado', hours: '9:00 AM – 6:00 PM', open: '9:00 AM', close: '6:00 PM' },
+  { day: 'Domingo', hours: 'Cerrado', open: 'Cerrado', close: 'Cerrado' },
+];
+
 export default function SettingsPage() {
   const { business, loading, updateBusiness } = useBusinessData();
   const { showToast } = useApp();
@@ -43,17 +53,6 @@ export default function SettingsPage() {
     address: '',
     phone: ''
   });
-
-  // Default hours structure
-  const defaultHours = [
-    { day: 'Lunes', hours: 'Cerrado', open: 'Cerrado', close: 'Cerrado' },
-    { day: 'Martes', hours: '9:00 AM – 6:00 PM', open: '9:00 AM', close: '6:00 PM' },
-    { day: 'Miércoles', hours: '9:00 AM – 6:00 PM', open: '9:00 AM', close: '6:00 PM' },
-    { day: 'Jueves', hours: '9:00 AM – 6:00 PM', open: '9:00 AM', close: '6:00 PM' },
-    { day: 'Viernes', hours: '9:00 AM – 6:00 PM', open: '9:00 AM', close: '6:00 PM' },
-    { day: 'Sábado', hours: '9:00 AM – 6:00 PM', open: '9:00 AM', close: '6:00 PM' },
-    { day: 'Domingo', hours: 'Cerrado', open: 'Cerrado', close: 'Cerrado' },
-  ];
 
   // Parse hours and profile when business loads
   useEffect(() => {

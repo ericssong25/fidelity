@@ -3,6 +3,7 @@ import { Bell, Star, Gift, CircleDollarSign, Megaphone, Check, type LucideIcon }
 import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
 import { supabase } from '../../lib/supabase';
+import NotificationDetailModal from '../../components/NotificationDetailModal';
 
 interface Notification {
   id: string;
@@ -60,6 +61,7 @@ export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [markingAll, setMarkingAll] = useState(false);
+  const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
 
   const loadNotifications = useCallback(async () => {
     if (!user?.id) {
@@ -188,7 +190,10 @@ export default function NotificationsPage() {
               return (
                 <button
                   key={notification.id}
-                  onClick={() => markAsRead(notification)}
+                   onClick={() => {
+                      markAsRead(notification);
+                      setSelectedNotification(notification);
+                    }}
                   className={`w-full text-left rounded-2xl p-4 shadow-sm border transition-all ${
                     isLevelUp && metadata?.color
                       ? 'border-transparent'
@@ -254,6 +259,12 @@ export default function NotificationsPage() {
             })}
           </div>
         )}
+
+        <NotificationDetailModal
+          open={selectedNotification !== null}
+          onClose={() => setSelectedNotification(null)}
+          notification={selectedNotification}
+        />
       </div>
     </div>
   );

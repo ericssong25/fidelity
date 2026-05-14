@@ -5,6 +5,7 @@ import AvatarSelector from '../../components/AvatarSelector';
 import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { supabase } from '../../lib/supabase';
 
 export default function AuthPage() {
   const { showToast } = useApp();
@@ -18,6 +19,9 @@ export default function AuthPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [demoMode, setDemoMode] = useState(false); // Temporal para testing
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [showForgotForm, setShowForgotForm] = useState(false);
+  const [forgotLoading, setForgotLoading] = useState(false);
   
   // Sign In form state
   const [signInEmail, setSignInEmail] = useState('');
@@ -39,7 +43,6 @@ export default function AuthPage() {
       return;
     }
     
-    // Basic email validation
     if (!signInEmail.includes('@')) {
       showToast('Ingresa un email válido', 'error');
       return;
@@ -56,6 +59,27 @@ export default function AuthPage() {
     } catch {
       showToast('Error al iniciar sesión. Intenta de nuevo.', 'error');
     }
+  }
+
+  async function handleForgotPassword() {
+    if (!forgotEmail || !forgotEmail.includes('@')) {
+      showToast('Ingresa un email válido', 'error');
+      return;
+    }
+
+    setForgotLoading(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail, {
+      redirectTo: window.location.origin + '/reset-password',
+    });
+
+    if (error) {
+      showToast('Error al enviar el enlace. Intenta de nuevo.', 'error');
+    } else {
+      showToast('Revisa tu correo. Te enviamos un enlace para restablecer tu contraseña.', 'success');
+      setShowForgotForm(false);
+      setForgotEmail('');
+    }
+    setForgotLoading(false);
   }
 
   async function handleSignUp(e: React.FormEvent) {
@@ -221,6 +245,56 @@ export default function AuthPage() {
                   </button>
                 </div>
               </div>
+
+              {showForgotForm ? (
+                <div className="space-y-3 pt-1">
+                  <div className="relative">
+                    <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#B1A9E5]" />
+                    <input
+                      type="email"
+                      value={forgotEmail}
+                      onChange={e => setForgotEmail(e.target.value)}
+                      placeholder="Ingresa tu correo"
+                      className="w-full pl-10 pr-4 py-3 rounded-inp border border-[#B1A9E5]/30 text-sm text-[#12173B] placeholder-[#B1A9E5] outline-none focus:border-[#7546ED] focus:ring-2 focus:ring-[#7546ED]/10 transition-all"
+                    />
+                  </div>
+                  <div className="flex gap-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowForgotForm(false);
+                        setForgotEmail('');
+                      }}
+                      className="flex-1 py-2.5 rounded-btn border border-[#B1A9E5]/40 text-[#B1A9E5] font-semibold text-xs"
+                    >
+                      Volver
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleForgotPassword}
+                      disabled={forgotLoading}
+                      className="flex-1 py-2.5 rounded-btn bg-[#7546ED] text-white font-bold text-xs disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                      {forgotLoading ? (
+                        <>
+                          <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          Enviando...
+                        </>
+                      ) : (
+                        'Enviar enlace'
+                      )}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setShowForgotForm(true)}
+                  className="text-[#B1A9E5] text-xs font-medium hover:text-[#7546ED] transition-colors text-right w-full"
+                >
+                  ¿Olvidaste tu contraseña?
+                </button>
+              )}
 
               <button
                 type="submit"

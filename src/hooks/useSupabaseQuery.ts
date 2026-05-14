@@ -195,6 +195,7 @@ export function useSupabaseQuery<T>(
         setLoading(false);
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enabled, timeout, retries, useCache, cacheKey, ...deps]);
 
   const retry = useCallback(() => {

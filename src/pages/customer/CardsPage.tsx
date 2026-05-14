@@ -12,7 +12,7 @@ interface LoyaltyCardWithBusiness {
   total_visits: number;
   issued_at: string;
   business_id: string;
-  current_level_id: string | null;
+  current_level: string | null;
   businesses: {
     id: string;
     name: string;

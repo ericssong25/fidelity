@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Search, X, Plus, CreditCard, AlertCircle, RefreshCw, ShoppingCart, Minus, Trash2, CheckCircle2, MessageCircle } from 'lucide-react';
 import Modal from '../../components/Modal';
 import { useApp } from '../../context/AppContext';
@@ -35,17 +35,15 @@ type LevelFilter = 'All' | Level;
 
 export default function CustomersPage() {
   const { showToast } = useApp();
-  const { business, loyaltyCards, loading, error, refresh, refreshCards } = useBusinessData();
+  const { business, loading, error, refresh, refreshCards } = useBusinessData();
   const [search, setSearch] = useState('');
   const [levelFilter, setLevelFilter] = useState<LevelFilter>('All');
   const [selected, setSelected] = useState<SelectedCustomer | null>(null);
-  const [adjustModal, setAdjustModal] = useState(false);
-  const [adjustAmount, setAdjustAmount] = useState('');
-  const [adjustReason, setAdjustReason] = useState('');
   const [isLoadingTransactions, setIsLoadingTransactions] = useState(false);
   
-  // Level names map
-  const [levelNames, setLevelNames] = useState<Record<string, Level>>({});
+  // Local customers list (server-side paginated)
+  const [customers, setCustomers] = useState<any[]>([]);
+  const [customersLoading, setCustomersLoading] = useState(false);
   
   // Card creation state
   const [cardModal, setCardModal] = useState(false);
@@ -63,61 +61,100 @@ export default function CustomersPage() {
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [selectedUser, setSelectedUser] = useState<any>(null);
-  const [existingCardUserIds, setExistingCardUserIds] = useState<Set<string>>(new Set());
-
-  // Fetch level names from business.loyalty_levels JSONB
-  useEffect(() => {
-    if (!business) return;
-
-    const loyaltyLevels = (business as unknown as Record<string, unknown> | null)?.loyalty_levels as Array<{
-      name: string; color?: string;
-    }> | undefined;
-
-    if (loyaltyLevels && Array.isArray(loyaltyLevels) && loyaltyLevels.length > 0) {
-      const map: Record<string, Level> = {};
-      loyaltyLevels.forEach((l, i) => {
-        const name = l.name as Level;
-        if (name === 'Bronze' || name === 'Silver' || name === 'Gold') {
-          // Use array index as the level ID for simplicity
-          map[String(i)] = name;
-        }
-      });
-      setLevelNames(map);
-    }
-  }, [business]);
 
   // Track which users already have cards (for search results indicator)
+  const [existingCardUserIds, setExistingCardUserIds] = useState<Set<string>>(new Set());
+
+  // Load existing card user IDs (lightweight, just IDs)
   useEffect(() => {
-    setExistingCardUserIds(new Set(loyaltyCards.filter(c => c.is_active).map(c => c.user_id)));
-  }, [loyaltyCards]);
+    if (!business?.id) return;
+    supabase
+      .from('loyalty_cards')
+      .select('user_id')
+      .eq('business_id', business.id)
+      .eq('is_active', true)
+      .then(({ data }) => {
+        setExistingCardUserIds(new Set((data || []).map(c => c.user_id)));
+      });
+  }, [business?.id, refreshCards]);
 
-  // Filtered cards
-  const filteredCards = useMemo(() => {
-    return loyaltyCards.filter(card => {
-      const name = card.profiles?.name || '';
-      const username = card.profiles?.username || '';
-      const email = card.profiles?.email || '';
-      const searchLower = search.toLowerCase();
+  // Load customers with server-side pagination/filtering
+  const loadCustomers = useCallback(async () => {
+    if (!business?.id) return;
+    setCustomersLoading(true);
 
-      const matchesSearch = !searchLower ||
-        name.toLowerCase().includes(searchLower) ||
-        username.toLowerCase().includes(searchLower) ||
-        email.toLowerCase().includes(searchLower);
+    try {
+      if (search.trim()) {
+        const searchTerm = `%${search.trim()}%`;
+        const { data: matchingProfiles } = await supabase
+          .from('profiles')
+          .select('id')
+          .or(`name.ilike.${searchTerm},username.ilike.${searchTerm},email.ilike.${searchTerm}`)
+          .limit(20);
 
-      const cardLevel = card.current_level_id
-        ? (levelNames[card.current_level_id] || defaultLevel)
-        : defaultLevel;
-      const matchesLevel = levelFilter === 'All' || cardLevel === levelFilter;
+        const userIds = (matchingProfiles || []).map(p => p.id);
+        if (userIds.length === 0) {
+          setCustomers([]);
+        } else {
+          const { data: cardsOnly } = await supabase
+            .from('loyalty_cards')
+            .select('id, user_id, business_id, current_points, total_visits, current_level, issued_at')
+            .eq('business_id', business.id)
+            .eq('is_active', true)
+            .in('user_id', userIds)
+            .limit(20);
+          setCustomers(await attachProfiles(cardsOnly || []));
+        }
+      } else if (levelFilter !== 'All') {
+        const { data: cardsOnly } = await supabase
+          .from('loyalty_cards')
+          .select('id, user_id, business_id, current_points, total_visits, current_level, issued_at')
+          .eq('business_id', business.id)
+          .eq('is_active', true)
+          .eq('current_level', levelFilter)
+          .order('current_points', { ascending: false })
+          .limit(10);
+        setCustomers(await attachProfiles(cardsOnly || []));
+      } else {
+        const { data: cardsOnly } = await supabase
+          .from('loyalty_cards')
+          .select('id, user_id, business_id, current_points, total_visits, current_level, issued_at')
+          .eq('business_id', business.id)
+          .eq('is_active', true)
+          .order('current_points', { ascending: false })
+          .limit(10);
+        setCustomers(await attachProfiles(cardsOnly || []));
+      }
+    } catch (err) {
+      console.error('Error loading customers:', err);
+    } finally {
+      setCustomersLoading(false);
+    }
+  }, [business?.id, search, levelFilter]);
 
-      return matchesSearch && matchesLevel;
-    });
-  }, [loyaltyCards, search, levelFilter, levelNames]);
+  useEffect(() => {
+    if (!business?.id) return;
+    loadCustomers();
+  }, [business?.id, search, levelFilter, loadCustomers]);
 
-  function handleAdjust() {
-    setAdjustModal(false);
-    setAdjustAmount('');
-    setAdjustReason('');
-    showToast('Puntos ajustados exitosamente', 'success');
+  async function attachProfiles(cardsOnly: any[]) {
+    const userIds = [...new Set(cardsOnly.map(c => c.user_id).filter(Boolean))];
+    const profilesMap: Record<string, any> = {};
+
+    if (userIds.length > 0) {
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, name, email, username, phone')
+        .in('id', userIds);
+      profiles?.forEach((p: any) => {
+        profilesMap[p.id] = p;
+      });
+    }
+
+    return cardsOnly.map(card => ({
+      ...card,
+      profiles: profilesMap[card.user_id] || null,
+    }));
   }
 
   function handleCreateCard() {
@@ -362,9 +399,14 @@ export default function CustomersPage() {
         ))}
       </div>
 
-      {/* Customer list with real cards */}
+      {/* Customer list with server-side pagination */}
       <div className="space-y-3">
-        {filteredCards.length === 0 ? (
+        {customersLoading ? (
+          <div className="text-center py-8">
+            <div className="w-8 h-8 border-2 border-[#7546ED]/30 border-t-[#7546ED] rounded-full animate-spin mx-auto mb-4" />
+            <p className="text-[#B1A9E5] text-sm">Cargando clientes...</p>
+          </div>
+        ) : customers.length === 0 ? (
           <div className="text-center py-8">
             <CreditCard size={48} className="text-[#B1A9E5] mx-auto mb-4" />
             <p className="text-[#B1A9E5] text-sm">
@@ -375,10 +417,8 @@ export default function CustomersPage() {
             </p>
           </div>
         ) : (
-          filteredCards.map((card: any) => {
-            const cardLevel = card.current_level_id
-              ? (levelNames[card.current_level_id] || defaultLevel)
-              : defaultLevel;
+          customers.map((card: any) => {
+            const cardLevel = (card.current_level as Level) || defaultLevel;
               
             return (
             <div
@@ -464,21 +504,13 @@ export default function CustomersPage() {
             <div className="p-5">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-bold text-[#12173B] text-sm">Historial de Transacciones</h3>
-                <div className="flex gap-2">
-                  <button
-                    onClick={handleRegisterPurchase}
-                    className="px-3 py-1.5 rounded-btn bg-[#10B981]/10 text-[#10B981] text-xs font-bold flex items-center gap-1"
-                  >
-                    <ShoppingCart size={12} />
-                    Registrar Compra
-                  </button>
-                  <button
-                    onClick={() => setAdjustModal(true)}
-                    className="px-3 py-1.5 rounded-btn bg-[#7546ED]/10 text-[#7546ED] text-xs font-bold"
-                  >
-                    Ajustar Puntos
-                  </button>
-                </div>
+                <button
+                  onClick={handleRegisterPurchase}
+                  className="px-3 py-1.5 rounded-btn bg-[#10B981]/10 text-[#10B981] text-xs font-bold flex items-center gap-1"
+                >
+                  <ShoppingCart size={12} />
+                  Registrar Compra
+                </button>
               </div>
               {selected.phone && (
                 <a
@@ -523,44 +555,6 @@ export default function CustomersPage() {
           </div>
         </div>
       )}
-
-      <Modal open={adjustModal} onClose={() => setAdjustModal(false)} title="Ajustar Puntos">
-        <div className="space-y-4">
-          <div>
-            <label className="text-xs font-semibold text-[#B1A9E5] mb-1 block">Cantidad de Puntos</label>
-            <input
-              value={adjustAmount}
-              onChange={e => setAdjustAmount(e.target.value)}
-              type="number"
-              placeholder="+50 o -50"
-              className="w-full px-3 py-2.5 rounded-inp border border-[#B1A9E5]/30 text-sm text-[#12173B] outline-none focus:border-[#7546ED] transition-all"
-            />
-          </div>
-          <div>
-            <label className="text-xs font-semibold text-[#B1A9E5] mb-1 block">Razón</label>
-            <input
-              value={adjustReason}
-              onChange={e => setAdjustReason(e.target.value)}
-              placeholder="ej. Corrección manual"
-              className="w-full px-3 py-2.5 rounded-inp border border-[#B1A9E5]/30 text-sm text-[#12173B] outline-none focus:border-[#7546ED] transition-all"
-            />
-          </div>
-          <div className="flex gap-3">
-            <button
-              onClick={() => setAdjustModal(false)}
-              className="flex-1 py-3 rounded-btn border border-[#B1A9E5]/40 text-[#B1A9E5] font-semibold text-sm"
-            >
-              Cancelar
-            </button>
-            <button
-              onClick={handleAdjust}
-              className="flex-1 py-3 rounded-btn bg-[#7546ED] text-white font-bold text-sm"
-            >
-              Confirmar
-            </button>
-          </div>
-        </div>
-      </Modal>
 
       {/* Create Card Modal */}
       <Modal open={cardModal} onClose={() => setCardModal(false)} title="Crear Tarjeta de Lealtad">

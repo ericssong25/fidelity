@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { HelpCircle, LogOut, ChevronRight, CreditCard as Edit3, Store, Building, Phone, MapPin } from 'lucide-react';
+import { HelpCircle, LogOut, ChevronRight, CreditCard as Edit3, Store, Building, Phone, MapPin, KeyRound } from 'lucide-react';
 import PhoneInput from '../../components/PhoneInput';
 import { sofia } from '../../data/mockData';
 import Modal from '../../components/Modal';
@@ -19,7 +19,7 @@ interface LoyaltyCardWithBusiness {
   total_visits: number;
   issued_at: string;
   business_id: string;
-  current_level_id: string | null;
+  current_level: string | null;
   businesses: {
     id: string;
     name: string;
@@ -34,6 +34,7 @@ interface LoyaltyCardWithBusiness {
 
 const menuItems = [
   { icon: Edit3, label: 'Editar perfil', color: 'text-[#12173B]' },
+  { icon: KeyRound, label: 'Cambiar contraseña', color: 'text-[#12173B]' },
   { icon: HelpCircle, label: 'Ayuda y soporte', color: 'text-[#12173B]' },
   { icon: LogOut, label: 'Cerrar sesión', color: 'text-[#FF6B6B]' },
 ];
@@ -145,7 +146,7 @@ export default function ProfilePage() {
   );
   
   // Query to check if user already owns a business
-  const { data: userBusiness } = useSupabaseQuery(
+  const { data: userBusiness, loading: businessCheckLoading } = useSupabaseQuery(
     async () => {
       if (!user?.id) {
         return { data: null, error: null };
@@ -199,6 +200,19 @@ export default function ProfilePage() {
       return;
     }
 
+    // Re-check to prevent race condition — user might already have a business
+    const { data: existingBusiness } = await supabase
+      .from('businesses')
+      .select('id')
+      .eq('owner_id', user.id)
+      .maybeSingle();
+
+    if (existingBusiness) {
+      showToast('Ya tienes un negocio registrado.', 'error');
+      setBusinessModal(false);
+      return;
+    }
+
     // Validation
     if (!businessForm.name.trim()) {
       showToast('El nombre del negocio es requerido', 'error');
@@ -243,9 +257,6 @@ export default function ProfilePage() {
         phone: ''
       });
       setBusinessModal(false);
-      
-      // Redirect to business settings
-      navigate('/business/settings');
       
     } catch (error) {
       console.error('Business creation error:', error);
@@ -389,6 +400,11 @@ export default function ProfilePage() {
                   setEditName(displayUser.name);
                   setEditPhone(displayUser.phone || '');
                   setEditModal(true);
+                } else if (item.label === 'Cambiar contraseña') {
+                  supabase.auth.resetPasswordForEmail(displayUser.email, {
+                    redirectTo: window.location.origin + '/reset-password',
+                  });
+                  showToast('Revisa tu correo para restablecer tu contraseña', 'success');
                 } else if (item.label === 'Cerrar sesión') {
                   setLogoutModal(true);
                 } else {
@@ -437,7 +453,7 @@ export default function ProfilePage() {
         </div>
       )}
 
-      {/* Register Business Section - Only show if user doesn't have a business */}
+      {/* Register Business Section - Always visible */}
       {!hasBusiness && !businessPending && (
         <div className="px-5 mt-4">
           <div className="bg-gradient-to-r from-[#7546ED] to-[#DC89FF] rounded-2xl p-4 shadow-sm border border-[#B1A9E5]/20">
@@ -453,9 +469,10 @@ export default function ProfilePage() {
               </div>
               <button
                 onClick={handleRegisterBusiness}
-                className="px-4 py-2 bg-white/20 backdrop-blur-sm rounded-lg text-white font-semibold text-sm hover:bg-white/30 transition-colors"
+                disabled={businessCheckLoading}
+                className="px-4 py-2 bg-white/20 backdrop-blur-sm rounded-lg text-white font-semibold text-sm hover:bg-white/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Registrar
+                {businessCheckLoading ? 'Cargando...' : 'Registrar'}
               </button>
             </div>
           </div>
