@@ -14,11 +14,28 @@ export default function ResetPasswordPage() {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    supabase.auth.onAuthStateChange((event) => {
-      if (event === 'PASSWORD_RECOVERY') {
+    let mounted = true;
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!mounted) return;
+
+      if (session) {
+        // Token already exchanged, ready immediately
         setReady(true);
+        return;
       }
+
+      // Listen for the token exchange event
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+        if (event === 'PASSWORD_RECOVERY' && mounted) {
+          setReady(true);
+        }
+      });
+
+      return () => subscription.unsubscribe();
     });
+
+    return () => { mounted = false; };
   }, []);
 
   async function handleSubmit(e: React.FormEvent) {
