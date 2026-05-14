@@ -45,15 +45,17 @@
 **Problema:** Queries fallidas hacen `console.error` y retornan array vacío. Usuario ve estado vacío idéntico a "sin datos".
 **Fix:** Mostrar banner de error con botón "Reintentar" en vez de estado vacío.
 
-### 🔴 #7 — Botón de login sin estado de carga
-**Archivos:** `AuthPage.tsx` + `AuthContext.tsx`
+### ✅ #7 — Botón de login sin estado de carga
+**Archivos:** `AuthPage.tsx`
 **Problema:** `isLoading` solo refleja carga inicial de sesión, no la petición de login en curso.
-**Fix:** Agregar estado `loginLoading` local en `AuthPage`.
+**Fix:** Agregado `loginLoading` + `registerLoading` locales con spinners animados en ambos botones (Sign In y Sign Up).
+**Estado:** ✅ Completado
 
-### #8 — Panel `demoMode` en producción
-**Archivo:** `AuthPage.tsx` líneas 342-372
+### ✅ #8 — Panel `demoMode` en producción
+**Archivo:** `AuthPage.tsx`
 **Problema:** Debug tool visible cuando hay rate limiting. Botón "Modo Demo" no crea cuenta real.
-**Fix:** Quitar de producción o feature-flag con variable de entorno.
+**Fix:** Eliminado completamente (estado, JSX, llamada `setDemoMode`).
+**Estado:** ✅ Completado
 
 ### #9 — Sin verificación de email
 **Archivos:** `AuthPage.tsx`, flujo de registro
@@ -61,15 +63,17 @@
 **Fix:** Pantalla post-registro "Revisa tu correo" o banner en perfil.
 **Nota:** Se exploró implementar con gate solo para registro de negocio pero se descartó. Pendiente para futuro.
 
-### #10 — Fallback a usuario mock `sofia`
-**Archivos:** `HomePage.tsx` línea 53, `ProfilePage.tsx` línea 53
+### ✅ #10 — Fallback a usuario mock `sofia`
+**Archivos:** `HomePage.tsx`, `ProfilePage.tsx`
 **Problema:** `displayUser = user || sofia` — muestra datos mock si sesión no cargada.
-**Fix:** Mostrar skeleton loader mientras `user` es null.
+**Fix:** Eliminado `sofia` y `displayUser`. Todo usa `user?.prop || ''` con null guards.
+**Estado:** ✅ Completado
 
-### #11 — Mensaje error teléfono inconsistente
-**Archivos:** `AuthPage.tsx` línea 82, `AuthContext.tsx` línea 260-262
+### ✅ #11 — Mensaje error teléfono inconsistente
+**Archivos:** `AuthPage.tsx`, `AuthContext.tsx`, `ProfilePage.tsx`
 **Problema:** Dice "7 dígitos", valida 10. Confunde al usuario.
-**Fix:** "El número de teléfono no es válido. Debe tener 7 dígitos después del prefijo."
+**Fix:** "Completa los 7 dígitos después del prefijo." en los 3 archivos.
+**Estado:** ✅ Completado
 
 ### #12 — Canje sin rollback en fallo parcial
 **Archivo:** `CardDetailPage.tsx` `handleRedeem()`
@@ -85,30 +89,35 @@
 **Problema:** Sin `aria-modal`, `role="dialog"`, focus trap, Escape key.
 **Fix:** Agregar atributos ARIA y listeners.
 
-### #14 — Sin animación de salida en toasts y modales
-**Archivos:** `Modal.tsx`, `Toast.tsx`
+### ✅ #14 — Sin animación de salida en toasts y modales
+**Archivos:** `Modal.tsx`, `Toast.tsx`, `AppContext.tsx`, `index.css`
 **Problema:** Desaparecen instantáneamente al cerrarse.
-**Fix:** CSS transitions con timer antes de desmontar.
+**Fix:** Keyframe `slide-down` en CSS. `closing` state en Modal. `removing` state en Toast vía AppContext. Animación de 250ms antes de desmontar.
+**Estado:** ✅ Completado
 
-### #15 — Sin notificaciones push en tiempo real
-**Archivo:** `NotificationContext.tsx`
+### ✅ #15 — Sin notificaciones push en tiempo real
+**Archivos:** `NotificationContext.tsx`, `NotificationToast.tsx`, `App.tsx`
 **Problema:** Badge solo se actualiza al montar o visitar la página.
-**Fix:** `supabase.channel()` para suscripción real-time.
+**Fix:** `supabase.channel()` escucha INSERT en `notifications`. Incrementa badge en vivo. `NotificationToast` muestra card flotante con título/mensaje/ícono + tap para abrir `NotificationDetailModal`. Auto-dismiss 5s.
+**Estado:** ✅ Completado
 
-### #16 — Tab "Perfil" activo sin diferenciación visual
-**Archivo:** `BottomNav.tsx` línea 41-43
+### ✅ #16 — Tab "Perfil" activo sin diferenciación visual
+**Archivo:** `BottomNav.tsx`
 **Problema:** Avatar solo cambia opacity, sin anillo ni color.
-**Fix:** Agregar `ring-2 ring-[#7546ED]` al avatar activo.
+**Fix:** `ring-2 ring-[#7546ED] ring-offset-1 rounded-full` cuando `isActive`.
+**Estado:** ✅ Completado
 
-### #17 — Nombre de negocio truncado sin tooltip
-**Archivo:** `LoyaltyCard.tsx` línea 68
+### ✅ #17 — Nombre de negocio truncado sin tooltip
+**Archivo:** `LoyaltyCard.tsx`
 **Problema:** `truncate` sin `title` attribute.
 **Fix:** `title={businessName}`.
+**Estado:** ✅ Completado
 
-### #18 — Posible doble `@` en username
-**Archivos:** `AuthPage.tsx` línea 106, `AuthContext.tsx`
-**Problema:** Si usuario escribe `@`, resulta `@@usuario`.
-**Fix:** `signUpUsername.replace(/^@+/, '')`.
+### ✅ #18 — Posible doble `@` en username
+**Archivos:** `AuthPage.tsx`
+**Problema:** Si usuario pega `@ric`, resulta `@@ric`.
+**Fix:** `signUpUsername.replace(/^@+/, '')` en el onChange del input.
+**Estado:** ✅ Completado
 
 ### #19 — Sin protección de rutas por rol
 **Archivo:** `App.tsx`
@@ -190,8 +199,8 @@
 | Prioridad | Cantidad | Completados | Pendientes |
 |---|---|---|---|
 | 🔴 Critical | 5 | ✅ #1, #4, #5 | ⏳ #2, #3 |
-| 🟠 High | 7 | 0 | #6–#12 |
-| 🟡 Medium | 8 | 0 | #13–#20 |
+| 🟠 High | 7 | ✅ #7, #8, #10, #11 | #6, #9, #12 |
+| 🟡 Medium | 8 | ✅ #14, #15, #16, #17, #18 | #13, #19, #20 |
 | 🟢 Low | 6 | 0 | #21–#26 |
 | 🆕 Bugs extras | 4 | ✅ B1–B4 | 0 |
-| **TOTAL** | **30** | **7** | **23** |
+| **TOTAL** | **30** | **16** | **14** |

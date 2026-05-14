@@ -17,11 +17,16 @@ export default function Modal({ open, onClose, title, children }: Props) {
       setVisible(true);
       setClosing(false);
       document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
+    } else if (visible) {
+      setClosing(true);
+      const timer = setTimeout(() => {
+        setVisible(false);
+        setClosing(false);
+        document.body.style.overflow = '';
+      }, 250);
+      return () => clearTimeout(timer);
     }
-    return () => { document.body.style.overflow = ''; };
-  }, [open]);
+  }, [open, visible]);
 
   const handleClose = useCallback(() => {
     setClosing(true);
