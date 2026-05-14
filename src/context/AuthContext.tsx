@@ -259,7 +259,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (userData.phone) {
         const phoneDigits = userData.phone.replace(/\D/g, '');
         if (phoneDigits.length > 3 && phoneDigits.length !== 10) {
-          throw new Error('El número de teléfono no es válido. Debe tener 7 dígitos.');
+          throw new Error('El número de teléfono no es válido. Completa los 7 dígitos después del prefijo.');
         }
       }
 

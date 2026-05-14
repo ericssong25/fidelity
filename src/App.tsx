@@ -7,6 +7,7 @@ import BottomNav from './components/BottomNav';
 import BusinessSidebar from './components/BusinessSidebar';
 import BusinessBottomNav from './components/BusinessBottomNav';
 import ToastContainer from './components/Toast';
+import NotificationToast from './components/NotificationToast';
 import { useEffect } from 'react';
 
 // Auth
@@ -34,6 +35,7 @@ import ScanPurchasePage from './pages/business/ScanPurchasePage';
 function CustomerLayout() {
   return (
     <NotificationProvider>
+      <NotificationToast />
       <div className="max-w-[430px] mx-auto min-h-screen bg-[#F4F3FB] relative">
         <Routes>
           <Route path="/home" element={<HomePage />} />

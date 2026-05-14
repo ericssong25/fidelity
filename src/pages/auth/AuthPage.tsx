@@ -17,7 +17,8 @@ export default function AuthPage() {
   const [isSignIn, setIsSignIn] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [demoMode, setDemoMode] = useState(false); // Temporal para testing
+  const [loginLoading, setLoginLoading] = useState(false);
+  const [registerLoading, setRegisterLoading] = useState(false);
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
   const [forgotEmail, setForgotEmail] = useState('');
   const [showForgotForm, setShowForgotForm] = useState(false);
@@ -48,6 +49,7 @@ export default function AuthPage() {
       return;
     }
     
+    setLoginLoading(true);
     try {
       const success = await login(signInEmail, signInPassword);
       if (success) {
@@ -58,6 +60,8 @@ export default function AuthPage() {
       }
     } catch {
       showToast('Error al iniciar sesión. Intenta de nuevo.', 'error');
+    } finally {
+      setLoginLoading(false);
     }
   }
 
@@ -103,7 +107,7 @@ export default function AuthPage() {
     
     const phoneDigits = signUpPhone.replace(/\D/g, '');
     if (phoneDigits.length > 3 && phoneDigits.length !== 10) {
-      errors.push('El número de teléfono no es válido. Debe tener 7 dígitos.');
+      errors.push('El número de teléfono no es válido. Completa los 7 dígitos después del prefijo.');
     }
     
     if (!signUpPassword) {
@@ -123,6 +127,7 @@ export default function AuthPage() {
       return;
     }
     
+    setRegisterLoading(true);
     try {
       const success = await register({
         name: signUpName,
@@ -154,13 +159,9 @@ export default function AuthPage() {
       }
     } catch (error: unknown) {
       const err = error as { message?: string };
-      if (err.message?.includes('rate limit') || err.message?.includes('Too Many Requests')) {
-        // Show demo mode option
-        setDemoMode(true);
-        showToast('Límite de peticiones excedido. Usa modo demo o espera unos minutos.', 'error');
-      } else {
-        showToast(err.message || 'Error al registrarse. Intenta de nuevo.', 'error');
-      }
+      showToast(err.message || 'Error al registrarse. Intenta de nuevo.', 'error');
+    } finally {
+      setRegisterLoading(false);
     }
   }
 
@@ -298,10 +299,17 @@ export default function AuthPage() {
 
               <button
                 type="submit"
-                disabled={isLoading}
+                disabled={isLoading || loginLoading}
                 className="w-full py-3 rounded-btn bg-[#7546ED] text-white font-bold text-sm hover:bg-[#6B3FD8] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isLoading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
+                {loginLoading ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Iniciando sesión...
+                  </span>
+                ) : (
+                  'Iniciar Sesión'
+                )}
               </button>
             </form>
           ) : (
@@ -387,7 +395,7 @@ export default function AuthPage() {
                   <input
                     type="text"
                     value={signUpUsername}
-                    onChange={e => setSignUpUsername(e.target.value)}
+                    onChange={e => setSignUpUsername(e.target.value.replace(/^@+/, ''))}
                     placeholder="username"
                     className="w-full pl-16 pr-4 py-3 rounded-inp border border-[#B1A9E5]/30 text-sm text-[#12173B] placeholder-[#B1A9E5] outline-none focus:border-[#7546ED] focus:ring-2 focus:ring-[#7546ED]/10 transition-all"
                   />
@@ -404,46 +412,21 @@ export default function AuthPage() {
 
               <button
                 type="submit"
-                disabled={isLoading}
+                disabled={isLoading || registerLoading}
                 className="w-full py-3 rounded-btn bg-[#7546ED] text-white font-bold text-sm hover:bg-[#6B3FD8] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isLoading ? 'Creando cuenta...' : 'Crear Cuenta'}
+                {registerLoading ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Creando cuenta...
+                  </span>
+                ) : (
+                  'Crear Cuenta'
+                )}
               </button>
             </form>
           )}
 
-          {/* Demo Mode for Rate Limiting */}
-          {demoMode && (
-            <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-xl">
-              <p className="text-xs text-yellow-800 font-semibold mb-2">Límite de peticiones activo</p>
-              <p className="text-xs text-yellow-700 mb-3">Límite de Supabase activo. Prueba estas opciones:</p>
-              <div className="space-y-2">
-                <button
-                  onClick={() => {
-                    // Simulate successful registration
-                    showToast('Demo: ¡Cuenta creada! Cambiando a inicio de sesión...', 'success');
-                    setDemoMode(false);
-                    setIsSignIn(true);
-                    setSignUpName('');
-                    setSignUpEmail('');
-                    setSignUpUsername('');
-                    setSignUpPassword('');
-                    setSignUpConfirmPassword('');
-                  }}
-                  className="w-full py-2 px-3 bg-yellow-100 text-yellow-800 rounded-lg text-xs font-medium hover:bg-yellow-200 transition-colors"
-                >
-                  Continuar en Modo Demo
-                </button>
-                <button
-                  onClick={() => setDemoMode(false)}
-                  className="w-full py-2 px-3 bg-white text-yellow-800 border border-yellow-300 rounded-lg text-xs font-medium hover:bg-yellow-50 transition-colors"
-                >
-                  Intentar más tarde
-                </button>
-              </div>
-              <p className="text-xs text-yellow-600 mt-2">O espera 5-10 minutos para que se reinicie el límite.</p>
-            </div>
-          )}
         </div>
 
         {/* Footer */}

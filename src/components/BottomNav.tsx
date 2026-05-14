@@ -39,7 +39,7 @@ export default function BottomNav() {
             {({ isActive }) => (
               <>
                 {avatar && user ? (
-                  <div className={isActive ? '' : 'opacity-70'}>
+                  <div className={isActive ? 'ring-2 ring-[#7546ED] ring-offset-1 rounded-full' : 'opacity-70'}>
                     <UserAvatar
                       avatarId={user.avatarId}
                       name={user.name}

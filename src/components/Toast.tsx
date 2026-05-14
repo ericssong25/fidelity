@@ -17,7 +17,7 @@ export default function ToastContainer() {
         return (
           <div
             key={t.id}
-            className={`${bg} text-white flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg text-sm font-medium animate-slide-up`}
+            className={`${bg} text-white flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg text-sm font-medium ${t.removing ? 'animate-slide-down' : 'animate-slide-up'}`}
             style={{ minWidth: 220, maxWidth: 340 }}
           >
             <Icon size={16} />

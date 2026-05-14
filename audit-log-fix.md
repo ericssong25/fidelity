@@ -22,18 +22,17 @@
 
 ### ✅ #4 — Sin flujo de "Olvidé mi contraseña"
 **Archivo:** `AuthPage.tsx`, `ResetPasswordPage.tsx`, `App.tsx`, `ProfilePage.tsx`
-**Problema:** Sin `resetPasswordForEmail`. Usuario bloqueado si olvida contraseña.
 **Fix:**
-- `AuthPage.tsx`: Agregado link "¿Olvidaste tu contraseña?" en Sign In → input email → `resetPasswordForEmail()` → toast confirmación
-- `ResetPasswordPage.tsx`: Nuevo — recibe token vía URL, formulario nueva contraseña + confirmación, llama `updateUser({ password })`
-- `App.tsx`: Agregada ruta pública `/reset-password`
-- `ProfilePage.tsx`: Agregado botón "Cambiar contraseña" en el menú → envía email directo al usuario autenticado
-- Email template HTML personalizado con paleta Zuma para Supabase Dashboard
+- `AuthPage.tsx`: Link "¿Olvidaste tu contraseña?" en Sign In → input email → `resetPasswordForEmail()` → toast confirmación
+- `ResetPasswordPage.tsx`: Nuevo — recibe token vía URL, formulario nueva contraseña + confirmación, `updateUser({ password })`
+- `App.tsx`: Ruta pública `/reset-password`
+- `ProfilePage.tsx`: Botón "Cambiar contraseña" en el menú
+- Email templates HTML en `email-templates/reset-password.html` y `email-templates/password-changed.html`
 **Estado:** ✅ Completado
 
 ### ✅ #5 — RLS: falta UPDATE policy en loyalty_cards para clientes
 **Archivo:** Supabase RLS policies
-**Problema:** Canje descuenta puntos con UPDATE, RLS lo bloquea silenciosamente.
+**Problema:** Canje descuenta puntos con UPDATE, RLS bloquea silenciosamente.
 **Fix:** `CREATE POLICY "Users can update own cards" ON loyalty_cards FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id)`
 **Estado:** ✅ Completado
 
@@ -41,12 +40,12 @@
 
 ## 🟠 HIGH (7 issues)
 
-### #6 — Errores de Supabase fallan en silencio
+### 🔴 #6 — Errores de Supabase fallan en silencio
 **Archivos:** `HomePage.tsx`, `CardsPage.tsx`, `ProfilePage.tsx`, `NotificationsPage.tsx`
 **Problema:** Queries fallidas hacen `console.error` y retornan array vacío. Usuario ve estado vacío idéntico a "sin datos".
 **Fix:** Mostrar banner de error con botón "Reintentar" en vez de estado vacío.
 
-### #7 — Botón de login sin estado de carga
+### 🔴 #7 — Botón de login sin estado de carga
 **Archivos:** `AuthPage.tsx` + `AuthContext.tsx`
 **Problema:** `isLoading` solo refleja carga inicial de sesión, no la petición de login en curso.
 **Fix:** Agregar estado `loginLoading` local en `AuthPage`.
@@ -58,8 +57,9 @@
 
 ### #9 — Sin verificación de email
 **Archivos:** `AuthPage.tsx`, flujo de registro
-**Problema:** Auto-login sin verificar `email_confirmed_at`. Nunca se le pide al usuario verificar.
+**Problema:** Auto-login sin verificar `email_confirmed_at`.
 **Fix:** Pantalla post-registro "Revisa tu correo" o banner en perfil.
+**Nota:** Se exploró implementar con gate solo para registro de negocio pero se descartó. Pendiente para futuro.
 
 ### #10 — Fallback a usuario mock `sofia`
 **Archivos:** `HomePage.tsx` línea 53, `ProfilePage.tsx` línea 53
@@ -112,8 +112,9 @@
 
 ### #19 — Sin protección de rutas por rol
 **Archivo:** `App.tsx`
-**Problema:** Cliente puede escribir `/business/overview` y acceder.
-**Fix:** Redirect basado en rol en `AuthenticatedRoutes`.
+**Problema:** Cliente puede acceder a rutas de negocio vía `RoleSwitcher` debug tool.
+**Nota:** El routing vía URL ya está protegido (`role === 'customer'` bloquea business routes). El `RoleSwitcher` es el único bypass.
+**Fix:** Quitar `RoleSwitcher` de producción o agregar check de negocio activo.
 
 ### #20 — Sin indicador de fortaleza de contraseña
 **Archivo:** `AuthPage.tsx` registro
@@ -156,11 +157,41 @@
 
 ---
 
-## Resumen
+## 🆕 NUEVOS — Bugs descubiertos y arreglados (post-audit)
 
-| Prioridad | Cantidad | Completados |
-|---|---|---|
-| 🔴 Critical | 5 | ✅ #1, #4, #5 (3/5) |
-| 🟠 High | 7 | 0 |
-| 🟡 Medium | 8 | 0 |
-| 🟢 Low | 6 | 0 |
+### ✅ B1 — Negocio duplicado por race condition
+**Archivo:** `ProfilePage.tsx`
+**Problema:** Click rápido en "Registrar" antes de que cargue `userBusiness` permitía crear negocios duplicados.
+**Fix:** Botón `disabled` mientras carga `businessCheckLoading`. Re-check en `handleCreateBusiness` antes de insertar.
+**Estado:** ✅ Completado
+
+### ✅ B2 — Redirect a Business Settings roto post-creación
+**Archivo:** `ProfilePage.tsx`
+**Problema:** `navigate('/business/settings')` después de crear negocio redirigía a `/home` porque `role` seguía siendo `customer`.
+**Fix:** Eliminado el redirect. El usuario se queda en perfil viendo banner "Pendiente de aprobación".
+**Estado:** ✅ Completado
+
+### ✅ B3 — Flujo de verificación de email deshecho
+**Archivo:** `ProfilePage.tsx`, `email-templates/`
+**Problema:** Se implementó verificación de email con gate para negocio, pero se descartó por decisión de producto.
+**Fix:** Eliminado modal de verificación, `supabaseUser` y estado `verifyEmailModal`. Templates guardados para futuro.
+**Estado:** ✅ Completado (deshecho)
+
+### ✅ B4 — Columna `profiles.user_id` eliminada
+**Archivo:** Supabase (migración)
+**Problema:** Columna redundante con 41 filas todas NULL, 0 usos en código.
+**Fix:** `ALTER TABLE profiles DROP COLUMN IF EXISTS user_id`
+**Estado:** ✅ Completado
+
+---
+
+## Resumen final
+
+| Prioridad | Cantidad | Completados | Pendientes |
+|---|---|---|---|
+| 🔴 Critical | 5 | ✅ #1, #4, #5 | ⏳ #2, #3 |
+| 🟠 High | 7 | 0 | #6–#12 |
+| 🟡 Medium | 8 | 0 | #13–#20 |
+| 🟢 Low | 6 | 0 | #21–#26 |
+| 🆕 Bugs extras | 4 | ✅ B1–B4 | 0 |
+| **TOTAL** | **30** | **7** | **23** |

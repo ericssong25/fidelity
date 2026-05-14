@@ -65,7 +65,7 @@ export default function LoyaltyCard({ businessName, currentPoints, totalPointsEa
 
       <div className={`relative z-10 flex flex-col h-full ${compact ? 'p-3' : 'p-5'}`}>
         <div className="flex items-start justify-between">
-          <p className={`text-white/80 font-semibold truncate ${compact ? 'text-xs' : 'text-sm'}`}>
+          <p className={`text-white/80 font-semibold truncate ${compact ? 'text-xs' : 'text-sm'}`} title={businessName}>
             {businessName}
           </p>
           <span

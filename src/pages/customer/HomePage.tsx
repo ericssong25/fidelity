@@ -5,7 +5,6 @@ import RoleSwitcher from '../../components/RoleSwitcher';
 import LoyaltyCard from '../../components/LoyaltyCard';
 import TransactionDetailModal from '../../components/TransactionDetailModal';
 import type { TransactionDetail, TransactionBenefits } from '../../components/TransactionDetailModal';
-import { sofia } from '../../data/mockData';
 import { useAuth } from '../../context/AuthContext';
 import { useSupabaseQuery } from '../../hooks/useSupabaseQuery';
 import { supabase } from '../../lib/supabase';
@@ -56,9 +55,6 @@ export default function HomePage() {
   const [purchaseDetail, setPurchaseDetail] = useState<TransactionDetail | null>(null);
   const [purchaseBenefits, setPurchaseBenefits] = useState<TransactionBenefits | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
-  
-  // Use real user data if available, otherwise fallback to mock data
-  const displayUser = user || sofia;
   
   // Query real loyalty cards from Supabase (using separate queries to avoid schema cache issues)
   const { data: loyaltyCards, loading: cardsLoading } = useSupabaseQuery<LoyaltyCardWithBusiness[]>(
@@ -387,7 +383,7 @@ export default function HomePage() {
         {/* Greeting */}
         <div className="mb-6">
           <div className="flex items-center gap-1">
-            <h1 className="text-2xl font-extrabold text-[#12173B]">Hola, {displayUser.name.split(' ')[0]}</h1>
+            <h1 className="text-2xl font-extrabold text-[#12173B]">Hola{user ? `, ${user.name.split(' ')[0]}` : ''}</h1>
             <span className="text-2xl">👋</span>
           </div>
           <p className="text-[#B1A9E5] text-sm mt-0.5 font-medium">Esto es lo nuevo hoy</p>

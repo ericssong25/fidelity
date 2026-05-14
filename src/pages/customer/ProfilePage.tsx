@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { HelpCircle, LogOut, ChevronRight, CreditCard as Edit3, Store, Building, Phone, MapPin, KeyRound } from 'lucide-react';
 import PhoneInput from '../../components/PhoneInput';
-import { sofia } from '../../data/mockData';
 import Modal from '../../components/Modal';
 import UserAvatar from '../../components/UserAvatar';
 import AvatarSelector from '../../components/AvatarSelector';
@@ -49,9 +48,6 @@ export default function ProfilePage() {
   const { showToast } = useApp();
   const { logout, user, refreshAuth } = useAuth();
   const navigate = useNavigate();
-  
-  // Use real user data if available, otherwise fallback to mock data
-  const displayUser = user || sofia;
   
   // Query real loyalty cards from Supabase (using separate queries to avoid schema cache issues)
   const { data: loyaltyCards, loading: cardsLoading } = useSupabaseQuery<LoyaltyCardWithBusiness[]>(
@@ -177,8 +173,9 @@ export default function ProfilePage() {
   const [logoutModal, setLogoutModal] = useState(false);
   const [businessModal, setBusinessModal] = useState(false);
   const [avatarModal, setAvatarModal] = useState(false);
-  const [editName, setEditName] = useState(displayUser.name);
-  const [editPhone, setEditPhone] = useState(displayUser.phone || '');
+  const [passwordModal, setPasswordModal] = useState(false);
+  const [editName, setEditName] = useState(user?.name || '');
+  const [editPhone, setEditPhone] = useState(user?.phone || '');
   
   // Business registration form state
   const [businessForm, setBusinessForm] = useState({
@@ -281,7 +278,7 @@ export default function ProfilePage() {
       if (editPhone) {
         const phoneDigits = editPhone.replace(/\D/g, '');
         if (phoneDigits.length > 3 && phoneDigits.length !== 10) {
-          errors.push('El número de teléfono no es válido. Debe tener 7 dígitos.');
+          errors.push('El número de teléfono no es válido. Completa los 7 dígitos después del prefijo.');
         }
       }
 
@@ -348,19 +345,15 @@ export default function ProfilePage() {
       >
         <div className="mb-3">
           <UserAvatar
-            avatarId={displayUser.avatarId}
-            name={displayUser.name}
+            avatarId={user?.avatarId ?? null}
+            name={user?.name || ''}
             size="xl"
             editable
             onClick={() => setAvatarModal(true)}
           />
         </div>
-        <h1 className="text-white font-extrabold text-xl">{displayUser.name}</h1>
-        <p className="text-white/60 text-sm">{displayUser.username}</p>
-        <p className="text-white/60 text-sm">{displayUser.email}</p>
-        {displayUser.phone && (
-          <p className="text-white/60 text-sm">{displayUser.phone}</p>
-        )}
+        <h1 className="text-white font-extrabold text-xl">{user?.name || ''}</h1>
+        <p className="text-white/60 text-sm">{user?.username || ''} · {user?.email || ''}</p>
       </div>
 
       {/* Stats */}
@@ -397,14 +390,11 @@ export default function ProfilePage() {
               key={item.label}
               onClick={() => {
                 if (item.label === 'Editar perfil') {
-                  setEditName(displayUser.name);
-                  setEditPhone(displayUser.phone || '');
+                  setEditName(user?.name || '');
+                  setEditPhone(user?.phone || '');
                   setEditModal(true);
                 } else if (item.label === 'Cambiar contraseña') {
-                  supabase.auth.resetPasswordForEmail(displayUser.email, {
-                    redirectTo: window.location.origin + '/reset-password',
-                  });
-                  showToast('Revisa tu correo para restablecer tu contraseña', 'success');
+                  setPasswordModal(true);
                 } else if (item.label === 'Cerrar sesión') {
                   setLogoutModal(true);
                 } else {
@@ -616,7 +606,7 @@ export default function ProfilePage() {
             <div>
               <label className="text-xs font-semibold text-[#B1A9E5] mb-1 block">Usuario</label>
               <input 
-                value={displayUser.username} 
+                value={user?.username || ''} 
                 disabled
                 className="w-full px-3 py-2.5 rounded-inp border border-[#B1A9E5]/20 text-sm text-[#B1A9E5] bg-[#F4F3FB] outline-none" 
               />
@@ -624,7 +614,7 @@ export default function ProfilePage() {
             <div>
               <label className="text-xs font-semibold text-[#B1A9E5] mb-1 block">Correo</label>
               <input 
-                value={displayUser.email} 
+                value={user?.email || ''} 
                 disabled
                 className="w-full px-3 py-2.5 rounded-inp border border-[#B1A9E5]/20 text-sm text-[#B1A9E5] bg-[#F4F3FB] outline-none" 
               />
@@ -678,12 +668,48 @@ export default function ProfilePage() {
         </div>
       </Modal>
 
+      {/* Change Password Confirmation Modal */}
+      <Modal open={passwordModal} onClose={() => setPasswordModal(false)} title="Cambiar contraseña">
+        <div className="space-y-4">
+          <div className="text-center py-2">
+            <div className="w-16 h-16 rounded-full bg-[#7546ED]/10 flex items-center justify-center mx-auto mb-4">
+              <KeyRound size={24} className="text-[#7546ED]" />
+            </div>
+            <h3 className="font-bold text-[#12173B] text-lg mb-2">Cambiar contraseña</h3>
+            <p className="text-[#B1A9E5] text-sm">
+              Te enviaremos un enlace a <strong className="text-[#12173B]">{user?.email}</strong> para que puedas restablecer tu contraseña de forma segura.
+            </p>
+          </div>
+
+          <div className="flex gap-3">
+            <button
+              onClick={() => setPasswordModal(false)}
+              className="flex-1 py-3 rounded-btn border border-[#B1A9E5]/40 text-[#B1A9E5] font-semibold text-sm"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={() => {
+                supabase.auth.resetPasswordForEmail(user?.email || '', {
+                  redirectTo: window.location.origin + '/reset-password',
+                });
+                showToast('Revisa tu correo para restablecer tu contraseña', 'success');
+                setPasswordModal(false);
+              }}
+              className="flex-1 py-3 rounded-btn bg-[#7546ED] text-white font-bold text-sm"
+            >
+              Enviar enlace
+            </button>
+          </div>
+        </div>
+      </Modal>
+
       {/* Avatar Selector Modal */}
       <AvatarSelector
         open={avatarModal}
         onClose={() => setAvatarModal(false)}
-        currentAvatarId={displayUser.avatarId}
-        userName={displayUser.name}
+        currentAvatarId={user?.avatarId ?? null}
+        userName={user?.name || ''}
       />
 
       {/* Version */}

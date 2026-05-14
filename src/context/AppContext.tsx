@@ -6,6 +6,7 @@ interface Toast {
   id: string;
   message: string;
   type: 'success' | 'error' | 'info';
+  removing: boolean;
 }
 
 interface AppContextType {
@@ -23,9 +24,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   function showToast(message: string, type: Toast['type'] = 'success') {
     const id = Math.random().toString(36).slice(2);
-    setToasts(prev => [...prev, { id, message, type }]);
+    setToasts(prev => [...prev, { id, message, type, removing: false }]);
     setTimeout(() => {
-      setToasts(prev => prev.filter(t => t.id !== id));
+      setToasts(prev => prev.map(t => t.id === id ? { ...t, removing: true } : t));
+      setTimeout(() => {
+        setToasts(prev => prev.filter(t => t.id !== id));
+      }, 250);
     }, 2500);
   }
 
