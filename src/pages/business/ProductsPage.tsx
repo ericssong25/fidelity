@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Plus, Edit2, AlertCircle, RefreshCw, Search } from 'lucide-react';
 import Modal from '../../components/Modal';
 import { useApp } from '../../context/AppContext';
@@ -28,7 +28,10 @@ export default function ProductsPage() {
   const { showToast } = useApp();
   const { business } = useBusinessData();
   const [products, setProducts] = useState<Product[]>([]);
+  const [allCategories, setAllCategories] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filtering, setFiltering] = useState(false);
+  const initialLoadDone = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState('Todos');
   const [searchQuery, setSearchQuery] = useState('');
@@ -42,23 +45,34 @@ export default function ProductsPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Load products from Supabase
-  async function loadProducts() {
+  // Load products with server-side filtering
+  const loadProducts = useCallback(async () => {
     if (!business?.id) {
       setLoading(false);
       return;
     }
 
     setLoading(true);
+    if (initialLoadDone.current) setFiltering(true);
     setError(null);
 
     try {
-      const { data, error: supabaseError } = await supabase
+      let query = supabase
         .from('products')
         .select('*')
         .eq('business_id', business.id)
-        .order('category', { ascending: true })
         .order('name', { ascending: true });
+
+      if (searchQuery.trim()) {
+        const term = `%${searchQuery.trim()}%`;
+        query = query.or(`name.ilike.${term},category.ilike.${term}`).limit(20);
+      } else if (activeCategory !== 'Todos') {
+        query = query.eq('category', activeCategory).limit(20);
+      } else {
+        query = query.limit(20);
+      }
+
+      const { data, error: supabaseError } = await query;
 
       if (supabaseError) {
         console.error('Error loading products:', supabaseError);
@@ -71,22 +85,30 @@ export default function ProductsPage() {
       setError('Error al cargar productos');
     } finally {
       setLoading(false);
+      setFiltering(false);
+      initialLoadDone.current = true;
     }
-  }
+  }, [business?.id, searchQuery, activeCategory]);
 
   useEffect(() => {
     loadProducts();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [loadProducts]);
 
-  // Get unique categories from products
-  const categories = ['Todos', ...Array.from(new Set(products.map(p => p.category).filter(Boolean)))];
+  // Load all categories (separate from product list — always shows all)
+  useEffect(() => {
+    if (!business?.id) return;
+    supabase
+      .from('products')
+      .select('category')
+      .eq('business_id', business.id)
+      .order('category')
+      .then(({ data }) => {
+        const cats = [...new Set((data || []).map(p => p.category).filter(Boolean))];
+        setAllCategories(cats);
+      });
+  }, [business?.id]);
 
-  const filtered = products.filter(p => {
-    const matchesCategory = activeCategory === 'Todos' || p.category === activeCategory;
-    const matchesSearch = !searchQuery || p.name.toLowerCase().includes(searchQuery.toLowerCase()) || p.category.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesCategory && matchesSearch;
-  });
+  const categories = ['Todos', ...allCategories];
 
   const existingCategories = Array.from(new Set(products.map(p => p.category).filter(Boolean)));
 
@@ -97,13 +119,14 @@ export default function ProductsPage() {
   }
 
   function openEdit(id: string) {
-    const p = products.find(x => x.id === id)!;
+    const p = products.find(x => x.id === id);
+    if (!p) return;
     setEditingId(id);
-    setEditName(p.name); 
-    setEditPrice(String(p.price)); 
-    setEditPoints(String(p.points || 0)); 
-    setEditCategory(p.category);
-    setEditDescription(p.description || ''); 
+    setEditName(p.name || '');
+    setEditPrice(String(p.price || ''));
+    setEditPoints(String(p.points || 0));
+    setEditCategory(p.category || '');
+    setEditDescription(p.description || '');
     setEditAvailable(p.is_available);
     setModal(true);
   }
@@ -133,7 +156,6 @@ export default function ProductsPage() {
       };
 
       if (editingId) {
-        // Update existing product
         const { error: updateError } = await supabase
           .from('products')
           .update(productData)
@@ -146,20 +168,18 @@ export default function ProductsPage() {
           return;
         }
 
-        // Update local state
-        setProducts(prev => prev.map(p => 
-          p.id === editingId 
+        setProducts(prev => prev.map(p =>
+          p.id === editingId
             ? { ...p, ...productData, id: editingId }
             : p
         ));
         showToast('Producto actualizado', 'success');
       } else {
-        // Create new product
         const { data: newProduct, error: insertError } = await supabase
           .from('products')
           .insert(productData)
           .select()
-          .single();
+          .maybeSingle();
 
         if (insertError || !newProduct) {
           console.error('Error creating product:', insertError);
@@ -168,7 +188,6 @@ export default function ProductsPage() {
           return;
         }
 
-        // Add to local state
         setProducts(prev => [...prev, newProduct]);
         showToast('Producto creado', 'success');
       }
@@ -200,17 +219,16 @@ export default function ProductsPage() {
         return;
       }
 
-      // Update local state
-      setProducts(prev => prev.map(p => 
+      setProducts(prev => prev.map(p =>
         p.id === id ? { ...p, is_available: newAvailability } : p
       ));
     } catch (err: unknown) {
       console.error('Error toggling availability:', err);
-      showToast('Failed to update availability', 'error');
+      showToast('Error al actualizar disponibilidad', 'error');
     }
   }
 
-  if (loading) {
+  if (loading && !filtering) {
     return (
       <div className="flex-1 p-5 pb-24 md:pb-8 overflow-y-auto">
         <h1 className="font-extrabold text-[#12173B] text-xl mb-4">Productos</h1>
@@ -225,7 +243,7 @@ export default function ProductsPage() {
   if (error) {
     return (
       <div className="flex-1 p-5 pb-24 md:pb-8 overflow-y-auto">
-        <h1 className="font-extrabold text-[#12173B] text-xl mb-4">Products</h1>
+        <h1 className="font-extrabold text-[#12173B] text-xl mb-4">Productos</h1>
         <div className="text-center py-8">
           <AlertCircle size={48} className="text-red-500 mx-auto mb-4" />
           <p className="text-red-600 text-sm font-medium mb-2">Error al cargar productos</p>
@@ -255,7 +273,6 @@ export default function ProductsPage() {
         </button>
       </div>
 
-      {/* Search bar */}
       <div className="relative mb-3">
         <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#B1A9E5]" />
         <input
@@ -266,7 +283,6 @@ export default function ProductsPage() {
         />
       </div>
 
-      {/* Category chips */}
       <div className="flex gap-2 mb-4 overflow-x-auto scrollbar-hide">
         {categories.map(cat => (
           <button
@@ -283,39 +299,47 @@ export default function ProductsPage() {
         ))}
       </div>
 
-      {filtered.length === 0 ? (
+      {filtering ? (
+        <div className="text-center py-8">
+          <div className="w-8 h-8 border-2 border-[#7546ED]/30 border-t-[#7546ED] rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-[#B1A9E5] text-sm">Filtrando...</p>
+        </div>
+      ) : products.length === 0 ? (
         <div className="text-center py-8">
           <div className="w-16 h-16 rounded-full bg-[#F4F3FB] flex items-center justify-center mx-auto mb-4">
             <Plus size={32} className="text-[#B1A9E5]" />
           </div>
           <p className="text-[#B1A9E5] text-sm">
-            {products.length === 0 ? 'Sin productos aún' : 'Sin productos en esta categoría'}
+            {searchQuery || activeCategory !== 'Todos' ? 'Sin resultados' : 'Sin productos aún'}
           </p>
           <p className="text-[#B1A9E5] text-xs mt-1">
-            {products.length === 0 ? 'Presiona "Agregar" para crear tu primer producto' : 'Prueba otra categoría'}
+            {searchQuery || activeCategory !== 'Todos' ? 'Ajusta los filtros' : 'Presiona "Agregar" para crear tu primer producto'}
           </p>
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-3">
-          {filtered.map((p, i) => (
+          {products.map((p, i) => {
+            const priceNum = typeof p.price === 'string' ? parseFloat(p.price) : p.price;
+            const displayName = p.name || '?';
+            return (
             <div key={p.id} className={`bg-white rounded-2xl overflow-hidden shadow-sm border border-[#B1A9E5]/10 ${!p.is_available ? 'opacity-60' : ''}`}>
               <div
                 className="h-20 flex items-center justify-center"
                 style={{ background: gradients[i % gradients.length] }}
               >
-                <span className="text-white font-extrabold text-2xl">{p.name.charAt(0)}</span>
+                <span className="text-white font-extrabold text-2xl">{displayName.charAt(0)}</span>
               </div>
               <div className="p-3">
                 <div className="flex items-start justify-between gap-1">
-                  <p className="font-bold text-[#12173B] text-xs leading-tight flex-1">{p.name}</p>
+                  <p className="font-bold text-[#12173B] text-xs leading-tight flex-1">{displayName}</p>
                   <button onClick={() => openEdit(p.id)} className="text-[#B1A9E5] hover:text-[#7546ED] transition-colors flex-shrink-0">
                     <Edit2 size={13} />
                   </button>
                 </div>
-                <p className="text-[#B1A9E5] text-[10px] mt-0.5">{p.category}</p>
+                <p className="text-[#B1A9E5] text-[10px] mt-0.5">{p.category || ''}</p>
                 <div className="flex items-center justify-between mt-2">
                   <div className="flex flex-col">
-                    <span className="text-[#7546ED] font-extrabold text-sm">${p.price.toFixed(2)}</span>
+                    <span className="text-[#7546ED] font-extrabold text-sm">${(priceNum || 0).toFixed(2)}</span>
                     <span className="text-[#10B981] font-semibold text-xs">+{p.points || 0} pts</span>
                   </div>
                   <button
@@ -331,37 +355,38 @@ export default function ProductsPage() {
                 </div>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
-      <Modal open={modal} onClose={() => setModal(false)} title={editingId ? 'Edit Product' : 'Add Product'}>
+      <Modal open={modal} onClose={() => setModal(false)} title={editingId ? 'Editar Producto' : 'Agregar Producto'}>
         <div className="space-y-4">
           <div>
-            <label className="text-xs font-semibold text-[#B1A9E5] mb-1 block">Name</label>
-            <input value={editName} onChange={e => setEditName(e.target.value)} placeholder="Product name"
+            <label className="text-xs font-semibold text-[#B1A9E5] mb-1 block">Nombre</label>
+            <input value={editName} onChange={e => setEditName(e.target.value)} placeholder="Nombre del producto"
               className="w-full px-3 py-2.5 rounded-inp border border-[#B1A9E5]/30 text-sm text-[#12173B] outline-none focus:border-[#7546ED] transition-all" />
           </div>
           <div>
-            <label className="text-xs font-semibold text-[#B1A9E5] mb-1 block">Description</label>
-            <input value={editDescription} onChange={e => setEditDescription(e.target.value)} placeholder="Short description"
+            <label className="text-xs font-semibold text-[#B1A9E5] mb-1 block">Descripción</label>
+            <input value={editDescription} onChange={e => setEditDescription(e.target.value)} placeholder="Descripción breve"
               className="w-full px-3 py-2.5 rounded-inp border border-[#B1A9E5]/30 text-sm text-[#12173B] outline-none focus:border-[#7546ED] transition-all" />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs font-semibold text-[#B1A9E5] mb-1 block">Price ($)</label>
+              <label className="text-xs font-semibold text-[#B1A9E5] mb-1 block">Precio ($)</label>
               <input value={editPrice} onChange={e => setEditPrice(e.target.value)} type="number" placeholder="0.00"
                 className="w-full px-3 py-2.5 rounded-inp border border-[#B1A9E5]/30 text-sm text-[#12173B] outline-none focus:border-[#7546ED] transition-all" />
             </div>
             <div>
-              <label className="text-xs font-semibold text-[#B1A9E5] mb-1 block">Points</label>
+              <label className="text-xs font-semibold text-[#B1A9E5] mb-1 block">Puntos</label>
               <input value={editPoints} onChange={e => setEditPoints(e.target.value)} type="number" placeholder="0"
                 className="w-full px-3 py-2.5 rounded-inp border border-[#B1A9E5]/30 text-sm text-[#12173B] outline-none focus:border-[#7546ED] transition-all" />
             </div>
           </div>
           <div>
-            <label className="text-xs font-semibold text-[#B1A9E5] mb-1 block">Category</label>
-            <input value={editCategory} onChange={e => setEditCategory(e.target.value)} placeholder="Category"
+            <label className="text-xs font-semibold text-[#B1A9E5] mb-1 block">Categoría</label>
+            <input value={editCategory} onChange={e => setEditCategory(e.target.value)} placeholder="Categoría"
               className="w-full px-3 py-2.5 rounded-inp border border-[#B1A9E5]/30 text-sm text-[#12173B] outline-none focus:border-[#7546ED] transition-all" />
             {existingCategories.length > 0 && (
               <div className="flex flex-wrap gap-1.5 mt-2">
@@ -379,7 +404,7 @@ export default function ProductsPage() {
             )}
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-sm font-semibold text-[#12173B]">Available</span>
+            <span className="text-sm font-semibold text-[#12173B]">Disponible</span>
             <button
               onClick={() => setEditAvailable(v => !v)}
               className={`w-11 h-6 rounded-full transition-all duration-300 relative ${editAvailable ? 'bg-[#10B981]' : 'bg-[#B1A9E5]/30'}`}
@@ -387,12 +412,12 @@ export default function ProductsPage() {
               <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all duration-300 ${editAvailable ? 'left-[22px]' : 'left-0.5'}`} />
             </button>
           </div>
-          <button 
-            onClick={handleSave} 
+          <button
+            onClick={handleSave}
             disabled={isSaving}
             className="w-full py-3 rounded-btn bg-[#7546ED] text-white font-bold text-sm disabled:opacity-50"
           >
-            {isSaving ? (editingId ? 'Saving...' : 'Creating...') : (editingId ? 'Save Changes' : 'Add Product')}
+            {isSaving ? (editingId ? 'Guardando...' : 'Creando...') : (editingId ? 'Guardar Cambios' : 'Agregar Producto')}
           </button>
         </div>
       </Modal>

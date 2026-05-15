@@ -455,11 +455,55 @@ export default function RewardsPage() {
         </div>
       )}
 
+      {/* Pending Redemptions — only visible while loading or when there are redemptions */}
+      {(loadingRedemptions || redemptions.length > 0) && (
+        <>
+          <h2 className="font-bold text-[#12173B] text-base mb-3">Canjes Pendientes</h2>
+          {loadingRedemptions ? (
+            <SkeletonLoader rows={2} />
+          ) : (
+            <div className="space-y-3 mb-8">
+              {redemptions.map(redemption => (
+                <div key={redemption.id} className="bg-white rounded-2xl p-4 shadow-sm border border-[#B1A9E5]/10">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="font-bold text-[#12173B] text-sm">{redemption.customer_name}</p>
+                      <p className="text-[#7546ED] text-xs font-medium">{redemption.reward_name}</p>
+                      <p className="text-[#B1A9E5] text-xs mt-0.5">{redemption.points_used} pts • Code: {redemption.redemption_code}</p>
+                      <p className="text-[#B1A9E5] text-[10px]">
+                        {new Date(redemption.created_at).toLocaleString()}
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => resolveRedemption(redemption, 'claimed')}
+                        className="flex items-center gap-1 px-3 py-1.5 rounded-btn bg-[#10B981]/10 text-[#10B981] text-xs font-bold hover:bg-[#10B981]/20 transition-colors"
+                      >
+                        <CheckCircle size={13} />
+                        Completar
+                      </button>
+                      <button
+                        onClick={() => resolveRedemption(redemption, 'expired')}
+                        className="flex items-center gap-1 px-3 py-1.5 rounded-btn bg-[#FF6B6B]/10 text-[#FF6B6B] text-xs font-bold hover:bg-[#FF6B6B]/20 transition-colors"
+                      >
+                        <XCircle size={13} />
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
       {/* Rewards list */}
+      <h2 className="font-bold text-[#12173B] text-base mb-3">Recompensas</h2>
       {loadingRewards ? (
-        <SkeletonLoader rows={3} className="mb-8" />
+        <SkeletonLoader rows={3} />
       ) : filteredRewards.length === 0 ? (
-        <div className="text-center py-8 mb-8 bg-white rounded-2xl border border-[#B1A9E5]/10">
+        <div className="text-center py-8 bg-white rounded-2xl border border-[#B1A9E5]/10">
           <AlertCircle size={48} className="text-[#B1A9E5] mx-auto mb-3" />
           <p className="text-[#B1A9E5] text-sm">
             {rewards.length === 0 ? 'Sin recompensas aún' : 'Sin resultados'}
@@ -469,7 +513,7 @@ export default function RewardsPage() {
           </p>
         </div>
       ) : (
-        <div className="space-y-3 mb-8">
+        <div className="space-y-3">
           {filteredRewards.map(reward => {
             const isValid = isRewardCurrentlyValid(reward);
             
@@ -534,50 +578,6 @@ export default function RewardsPage() {
               </div>
             );
           })}
-        </div>
-      )}
-
-      {/* Pending Redemptions */}
-      <h2 className="font-bold text-[#12173B] text-base mb-3">Canjes Pendientes</h2>
-      {loadingRedemptions ? (
-        <SkeletonLoader rows={2} />
-      ) : redemptions.length === 0 ? (
-        <div className="text-center py-6 bg-white rounded-2xl border border-[#B1A9E5]/10">
-          <CheckCircle size={32} className="text-[#10B981] mx-auto mb-2" />
-          <p className="text-[#B1A9E5] text-sm">Sin canjes pendientes</p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {redemptions.map(redemption => (
-            <div key={redemption.id} className="bg-white rounded-2xl p-4 shadow-sm border border-[#B1A9E5]/10">
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <p className="font-bold text-[#12173B] text-sm">{redemption.customer_name}</p>
-                  <p className="text-[#7546ED] text-xs font-medium">{redemption.reward_name}</p>
-                  <p className="text-[#B1A9E5] text-xs mt-0.5">{redemption.points_used} pts • Code: {redemption.redemption_code}</p>
-                  <p className="text-[#B1A9E5] text-[10px]">
-                    {new Date(redemption.created_at).toLocaleString()}
-                  </p>
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => resolveRedemption(redemption, 'claimed')}
-                    className="flex items-center gap-1 px-3 py-1.5 rounded-btn bg-[#10B981]/10 text-[#10B981] text-xs font-bold hover:bg-[#10B981]/20 transition-colors"
-                  >
-                    <CheckCircle size={13} />
-                    Completar
-                  </button>
-                  <button
-                    onClick={() => resolveRedemption(redemption, 'expired')}
-                    className="flex items-center gap-1 px-3 py-1.5 rounded-btn bg-[#FF6B6B]/10 text-[#FF6B6B] text-xs font-bold hover:bg-[#FF6B6B]/20 transition-colors"
-                  >
-                    <XCircle size={13} />
-                    Cancelar
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
         </div>
       )}
 
