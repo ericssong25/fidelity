@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Users, TrendingUp, Zap, Gift, AlertCircle, RefreshCw, DollarSign, ShoppingCart, Award, ArrowUpRight, CreditCard } from 'lucide-react';
 import { useBusinessData } from '../../context/BusinessDataContext';
 import { supabase } from '../../lib/supabase';
@@ -28,6 +29,7 @@ interface DailyStat {
 export default function OverviewPage() {
   const { business, loyaltyCards, loading, error, refresh } = useBusinessData();
   const { showToast } = useApp();
+  const navigate = useNavigate();
   
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [redemptions, setRedemptions] = useState<Transaction[]>([]);
@@ -401,7 +403,11 @@ const [topCustomers, setTopCustomers] = useState<TopCustomer[]>([]);
           <p className="text-[#B1A9E5] text-xs font-medium mt-0.5">Puntos emitidos</p>
         </div>
 
-        <div className="bg-white rounded-2xl p-4 shadow-sm border border-[#B1A9E5]/10" style={{ borderLeft: '3px solid #FF6B6B' }}>
+        <button
+          onClick={() => navigate('/business/rewards')}
+          className="w-full text-left bg-white rounded-2xl p-4 shadow-sm border border-[#B1A9E5]/10 hover:shadow-md transition-shadow cursor-pointer"
+          style={{ borderLeft: '3px solid #FF6B6B' }}
+        >
           <div className="flex items-center justify-between mb-2">
             <Gift size={18} style={{ color: '#FF6B6B' }} />
             {pendingRedemptions > 0 && (
@@ -412,7 +418,7 @@ const [topCustomers, setTopCustomers] = useState<TopCustomer[]>([]);
           </div>
           <p className="text-[#12173B] font-extrabold text-2xl">{totalRedemptions}</p>
           <p className="text-[#B1A9E5] text-xs font-medium mt-0.5">Canjes realizados</p>
-        </div>
+        </button>
       </div>
 
       {/* Activity Chart */}
